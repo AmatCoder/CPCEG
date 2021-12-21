@@ -10,6 +10,8 @@ OBJ_FILES = cpcec.o
 
 build: $(APP)
 
+cpcec.o:	cpcec.c cpcec-a8.h  cpcec-ay.h  cpcec-d7.h  cpcec-k7.h  cpcec-os.h  cpcec-ox.h  cpcec-rt.h  cpcec-z8.h
+
 $(APP): $(OBJ_FILES)
 	$(CC) -o $@ $(SOURCE_FILES) $(CFLAGS) $(LDFLAGS)
 
