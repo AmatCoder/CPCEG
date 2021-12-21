@@ -1,0 +1,999 @@
+﻿# CPCEC -- http://cngsoft.no-ip.org/cpcec.htm #
+
+	  ####  ######    ####  #######   ####   -------------------------
+	 ##  ##  ##  ##  ##  ##  ##   #  ##  ##  CPCEC, plain text Amstrad
+	##       ##  ## ##       ## #   ##       CPC emulator written in C
+	##       #####  ##       ####   ##       as a postgraduate project
+	##       ##     ##       ## #   ##       by Cesar Nicolas-Gonzalez
+	 ##  ##  ##      ##  ##  ##   #  ##  ##  since 2018-12-01 till now
+	  ####  ####      ####  #######   ####   -------------------------
+
+## Foreword ##
+
+CPCEC is an emulator of the family of home microcomputers Amstrad CPC (models
+464, 664, 6128, Plus and GX4000) whose goal is to be loyal to the original
+hardware and efficient in standard modern systems. Thus it brings a faithful
+emulation of the Z80 microprocessor and it replicates the behavior of the CRTC
+6845 and Gate Array video chips, the PSG AY-3-8912 sound chip, the remaining
+circuits found in the original hardware, and the tape deck and floppy disc drive
+that made possible loading and running software.
+
+Software and documentation are provided "as is" with no warranty. The source
+code of CPCEC and its binaries follow the GNU General Public License v3, as seen
+in the file GPL.TXT within the package.
+
+## Requirements and setup ##
+
+The default build of CPCEC requires a Microsoft Windows 2000 operating system or
+later, while the SDL2 build requires any operating system supported by the SDL2
+library [http://www.libsdl.org/] from version 2.0.4 or higher. The minimal
+hardware requirements are those fitting the operating system, and it's advised
+that the main microprocessor runs at 400 MHz at least. Screen resolution in
+pixels must be 800x600 at least. A sound card is optional, as well as equipping
+a joystick. The mouse can emulate a lightgun to the user's choice.
+
+The emulator spans several files: the runnable binaries (by default CPCEC.EXE
+and ZXSEC.EXE for Windows) and the firmware files CPC464.ROM, CPC664.ROM,
+CPC6128.ROM, CPCADOS.ROM, CPCPLUS.ROM, SPEC128K.ROM, SPEC-P-2.ROM, SPEC-P-3.ROM
+and SPECTRUM.ROM. All these files must be copied in a single directory, ideally
+created to host the emulator.
+
+The binaries can be compiled from the source files by following the instructions
+in the next paragraphs. GCC 4.9.2, GCC 5.1.0, Pelles C 4.50.113, TCC 0.9.27 and
+Clang 3.7.1 work correctly; GCC 4.7.1 makes severe mistakes in compilation and
+can generate invalid binaries.
+
+The Windows binaries can be compiled from GCC (or compatible) through the
+following commands:
+
+	windres cpcec.rc -Ocoff -ocpcec.res
+	gcc -mwindows cpcec.res -O2 -xc cpcec.c -luser32 -lgdi32 -lwinmm
+-lcomdlg32 -lshell32 -ocpcec.exe
+
+	windres zxsec.rc -Ocoff -ozxsec.res
+	gcc -mwindows zxsec.res -O2 -xc zxsec.c -luser32 -lgdi32 -lwinmm
+-lcomdlg32 -lshell32 -ozxsec.exe
+
+Optional DirectDraw support can be achieved by appending `-DDDRAW -lddraw` to
+the `gcc ...` commands.
+
+Pelles C and other visual compilers can define the whole project from the source
+files CPCEC.C and ZXSEC.C and the resource files CPCEC.RC and ZXSEC.RC, and
+guess the additional files on their own (icons and header files) while the
+libraries required for the compiling procedure (if the compiler doesn't
+recognize them on its own) are USER32, GDI32, WINMM, COMDLG32 and SHELL32, all
+them from the Win32 SDK.
+
+The binaries for operating systems supported by SDL2 need different commands.
+Some systems may require an additional parameter `-DSDL2_DOUBLE_QUEUE` if the
+sound becomes choppy due to the default buffer being too short.
+
+	gcc -DSDL2 -O2 -xc cpcec.c -lSDL2 -ocpcec
+
+	gcc -DSDL2 -O2 -xc zxsec.c -lSDL2 -ozxsec
+
+Besides, the filenames must be in lower case: the contents of the ZIP archive
+may need to be extracted with "unzip -L cpcec-20XXXXXX.zip".
+
+## Configuration and files ##
+
+The behavior of CPCEC can be configured by specifying optional parameters in the
+command line. It's convenient to keep the user's preferred parameters by
+creating a link or shortcut to the emulator in the system menu and including
+said parameters within the link. Options can be abridged in Unix style: for
+example `-C -d -J` becomes `-CdJ`. In case of doubt, the parameter `-h` shows a
+short help explaining the available options.
+
+* -C0 : display the screen in black and white;
+* -C1 : display the screen in dark colour;
+* -C2 : display the screen in full colour (by default);
+* -C3 : display the screen in bright colour;
+* -C4 : display the screen in levels of green;
+* -c0 : set the scanline mode to half;
+* -c1 : set the scanline mode to whole (by default);
+* -c2 : set the interlace mode to simple;
+* -c3 : set the interlace mode to double;
+* -c4, -c5, -c6, -c7 : set the scanline and interlace modes as in -c0...-c3,
+plus blending;
+* -d : start the emulation with the debugger on (by default off);
+* -g0, -g1, -g2, -g3, -g4 : set the CRTC type (by default 1);
+* -h : short help;
+* -j : enable emulation of joystick on keyboard (cursors and keys Z, X and C);
+* -J : disable the usage of a joystick plugged to the system;
+* -K, -k0 : emulate 64k RAM only
+* -k1 : emulate 128k RAM (by default);
+* -k2 : emulate 192k RAM;
+* -k3 : emulate 320k RAM;
+* -k4 : emulate 576k RAM;
+* -m0 : start emulation as an Amstrad CPC 464;
+* -m1 : start emulation as an Amstrad CPC 664;
+* -m2 : start emulation as an Amstrad CPC 6128, by default;
+* -m3 : start emulation as an Amstrad Plus (Plus 464, Plus 6128 and GX4000 only
+differ in the amount of RAM, the disc controller and the keyboard);
+* -O : hide onscreen indicators (by default shown);
+* -p : enable Playcity audio (by default disabled);
+* -P : disable Playcity audio;
+* -R : disable real time emulation (by default enabled);
+* -S : disable sound (by default enabled if there's a sound card);
+* -T : disable stereophony (by default enabled);
+* -W : use the full screen rather than a window;
+* -X : disable emulation of disc drives (by default enabled);
+* -Y : disable tape analysis (by default enabled; see below);
+* -Z : disable tape acceleration (by default enabled);
+* -! : disable video and audio hardware acceleration;
+* -$ : turn the normal menu (always visible) into a pop-up (right-click) on
+Win32; turn the black-on-white user interface into white-on-black on SDL2.
+
+It's also possible to add file names to the command line: the emulator will try
+opening and running the specified files. Thanks to it CPCEC can be linked to the
+file extensions CDT, CPR, CSW, DSK and SNA to automatically load said files.
+
+The file types supported by the emulator are divided in four types:
+
+* WAV, CSW and CDT: tape files, or more properly digital dumps of the contents
+of a magnetic tape used to store and distribute data and software.
+* DSK: disc files, virtual translations of the structure and contents of a
+magnetic floppy disc able to contain data and software.
+* SNA: "snapshots", integral copies of the state of an emulated system that make
+possible resuming in a later time said state of emulation.
+* ROM and CPR: firmwares and cartridges. The firmware contains the BIOS and the
+BASIC interpreter; cartridges were used by the Amstrad Plus series.
+
+Tape playback relies on two methods (enabled by default) to improve the user
+experience by shortening a procedure that was originally very slow: a typical
+programme on tape took five minutes to load. The first method (tape
+acceleration) simply detects whether there's a tape in and the cassette motor is
+active: in that case the emulator starts running at its maximum possible speed.
+The second method (tape analysis) examines the current state of the Z80 and
+detects whether it's trying to read the tape in a known way: in that case it
+modifies its state to instantly generate the playback results instead of waiting
+for the tape to raise the next signal.
+
+Automatic loading of disc files tries detecting on its own the required booting
+method. Because some discs had more than one possible booting point and the
+emulator is in risk of choosing an unwanted one, the user can choose it on his
+own by typing the command `RUN"FILENAME` (where FILENAME is the booting file,
+that is often specified in the software instructions, or be simply DISC or DISK)
+in the emulated system and pressing RETURN. In case of doubt, the command CAT
+shows the list of files stored inside the disc.
+
+## Functions ##
+
+Once it's running, CPCEC shows the screen of the emulated system and obeys the
+user's commands, that besides those belonging to said system (control and
+alphanumeric keypresses, motions of the joystick, either real or emulated
+through the keyboard) include a series of special function keys. In case of
+doubt, key F1 shows a short index of these function keys.
+
+* F1: short help;
+* F1+Control: emulator authorship;
+* F2: record the emulation's current state into a snapshot;
+* F2+Control: record again the last selected snapshot;
+* F3: load and run a tape file, disc file, snapshot or cartridge;
+* F3+Control: load again the last selected snapshot;
+* F4: enable (or disable) sound emulation;
+* F4+Control: enable (or disable) the keyboard-emulated joystick;
+* F5: choose the emulated CPC firmware, that can be a ROM file, an INI file or a
+CPR-formatted cartridge;
+* F5+Shift: insert Dandanator cartridge; bear in mind that these cartridges are
+internally different to the CPC firmwares and thus must be handled separately;
+* F5+Control: reset the emulation;
+* F5+Control+Shift: remove Dandanator cartridge;
+* F6: enable (or disable) realtime emulation;
+* F6+Control: raise the speed of the emulated Z80 from 4 MHz to 8, 12 and 16
+MHz;
+* F6+Control+Shift: lower its speed to 12, 8 and 4 MHz;
+* F7: insert a disc file into the virtual disc drive A; notice that the access
+mode is read-only unless the user explicitly enables read-write access on the
+file selection dialog;
+* F7+Shift: insert a disc file into the virtual disc drive B;
+* F7+Control: remove the disc from the virtual disc drive A;
+* F7+Control+Shift: remove the disc from the virtual disc drive B;
+* F8: insert a tape file in the virtual tape deck;
+* F8+Shift: start recording a new tape file;
+* F8+Control: remove the tape from the virtual tape deck;
+* F9: enable the debugger (see below);
+* F9+Shift: show (or hide) the onscreen indicators;
+* F9+Control: enable (or disable) tape acceleration;
+* F9+Control+Shift: enable (or disable) tape analysis;
+* F11: toggle the colour mode between monochrome, green and three levels of
+colour of increasing brightness;
+* F11+Shift: ditto in reverse, moving through decreasing brightness colour
+levels;
+* F11+Control: change the type of scanlines, from half scanlines to double
+interlace;
+* F11+Control+Shift: ditto in reverse, from double interlace to half scanlines;
+* F12: record the content of the screen into a BMP file in the emulator's
+directory;
+* F12+Mays: record a video in the temporary format XRF (see below in "Videos");
+* F12+Control: start recording (or stop) the sound into a WAV file;
+* F12+Control+Shift: start recording (or stop) the sound into a YM file;
+* Pause: stop (or resume) emulation;
+* Alt+Return: maximize (or restore) the window. The menu becomes hidden when
+maximizing the window with these keys.
+
+SDL2-based versions are slightly different because they provide their own
+graphical interface; the menu shows up when the user presses F10 on the keyboard
+or right click on the mouse, and to change the disc file access mode the user
+must press TAB within the file selection dialog shown by F7 or F7+Shift. The
+user can handle the dialogs with the keyboard or the mouse: in the menus,
+clicking on a menu item will select it, while in other dialogs an item is
+selected by clicking on it (if it isn't visible the list will scroll to reveal
+it) and accepted by clicking on it again. All dialogs can be left by clicking
+the mouse while it lies outside the dialog.
+
+Files BMP and WAV are the namesake standard files of image and sound. YM files
+are dumps of the sound chip states, that because of their usage in other
+platforms besides the Amstrad CPC (Spectrum 128, MSX, Atari ST...) can be
+emulated and played back independently in third party programmes such as STSOUND
+and AY-EMUL. Notice that the scanline mode (option that simulates several types
+of screen) mirrors itself on the recordings as well as on the screen, and that
+each mode has a different impact on the programme performance: the normal mode
+consumes the most processing power, and the double interlace, the least.
+
+INI files can be used to define a "profile", a set of extra ROMs to load on top
+of the current firmware. Internally they're simple text files where each line
+defines an attribute or a ROM:
+
+* type = 0..3 : sets the firmware type (for example 0 stands for CPC464) as seen
+in the command line parameters -m0..3;
+* bank = 0..4 : sets the RAM size (for example 0 stands for 64k) as seen in the
+parameters -k0..4;
+* crtc = 0..4 : sets the CRTC type, as seen in the parameters -g0..4;
+* fddc = 0..1 : sets whether the floppy disc drive controller is enabled (1) or
+disabled (0);
+* lowest=filename : sets the LOW ROM content; the ROM file must be located in
+the same directory where the profile is;
+* highXX=filename : sets the content of HIGH ROM slot XX, where XX is a
+two-digit hexadecimal number: "00" is 0, "0A" is 10, "10" is 16, etc. for
+example HIGH07=PARADOS.ROM would place PARADOS.ROM in slot 7.
+
+The onscreen indicators show the state of the disc drives (track number, busy or
+idle), the tape deck (busy or idle) and the joystick.
+
+The following keys adjust the frameskip: the higher this parameter, the lower
+the required processing power, but also the lower the visual smoothness. Ideally
+it should keep its value to 0 unless 1.- the system lacks enough processing
+power, or 2.- the user needs to speed the emulation up for a while.
+
+* Num.+ : increases the value of frameskip, up to 25;
+* Num.- : decreases the value of frameskip, down to 0;
+* Num.* : sets the value of frameskip to the maximum, 25;
+* Num./ : sets the value of frameskip to the minimum, 0.
+
+The menu also includes several additional options (for example CRTC type and RAM
+size) as well as actions such as flipping the sides of inserted discs, browsing
+the contents of the current tape, and enabling several hardware extensions:
+Dandanator cartridges, lightguns, Playcity and Digiblaster sound chips, etc.
+
+CPCEC supports drag-and-drop. Dropped files will be automatically loaded (as F3
+does) unless the Shift key is down; in this case they will be inserted as F7 and
+F8 do.
+
+ZIP and GZIP archives can be read by CPCEC (if there are more than one file
+inside, a list will be shown so the user can choose the required file) but their
+contents cannot be modified.
+
+The mapping between the real keyboard and the emulated is straightforward
+(alphanumeric table, control keys, numeric keypad, cursors...) with the only
+particularities of DELETE for CLR and INSERT for COPY, as their functions are
+equivalent but modern keyboards no longer place these keys within the
+alphanumeric table.
+
+## Debugger ##
+
+The debugger is used to stop the emulation and examine its internal state. It
+was originally based on a command line interface; it has since been updated into
+a cursor-driven user interface divided into four panels: disassembly (top left),
+registers (top right), memory dump (bottom left) and stack (bottom right). The
+left half (read only) of the registers panel shows the hardware registers (Gate
+Array, CRTC, etc.) while the right half (read-write) shows the Z80 registers
+proper. The values shown on screen and the command parameters use hexadecimal
+notation.
+
+* Cursors, Page Up and Page Down move the cursor within the current panel;
+* Tab (or Shift+Tab) move the cursor to the next (or previous) panel;
+* Digits from 0 to 9 and letters from A to F modify the value under the cursor;
+* Stop (".") creates or deletes a breakpoint in the current cursor location in
+the disassembly;
+* G ("go to") requests an address (in hexadecimal by default, in decimal if
+preceded by ".") and moves the cursor to its location in the disassembly or the
+memory dump;
+* H ("help") shows a short help;
+* I ("input") requests a filename and loads its contents onto memory starting
+from the current location of the cursor;
+* J ("jump to") sets the PC to the location under the cursor in the disassembly;
+* L ("log") requests an 8-bit register (B, C, D, E, H, L, F or A) and sets a
+special breakpoint in the current instruction under the cursor; from then on,
+whenever that instruction takes place, the value of the 8-bit register will be
+sent to a log file first chosen by the user;
+	+ K closes the log file;
+* M toggles the contents of the memory dump between what the Z80 can read (RAM
+or ROM; the separator between hexadecimal and ASCII fields is `/`) and what it
+can write (RAM only; the separator is `\`);
+* O ("output") requests a length in bytes and a filename, and creates a file
+with a memory dump starting from the current location of the cursor;
+* P ("print") requests a length in bytes and a filename, and creates a file with
+a disassembly (disassembly panel) or a hex dump (memory dump panel) starting
+from the current location of the cursor;
+* Q toggles the behavior of illegal opcode $EDFF, either as in normal mode
+("EDFF-") where it does nothing special or in development mode ("EDFF+") where
+its a breakpoint;
+* R ("run to") runs the emulation until reaching the operation under the cursor
+in the disassembly;
+* S ("search") requests either an ASCII string (case insensitive) or a
+hexadecimal string preceded by "$" (for example `SOS` becomes `$534F53`) and
+searches the memory for it since the current location until the last valid
+address. If it finds the string it moves the cursor next to it in either the
+disassembly or the memory dump;
+	+ N ("next") searches again the memory for the same string;
+* T ("timer") resets the timer; its value increases as emulaton goes on;
+* U ("return") resumes the emulation until reaching the current call's return
+address;
+* V ("view") changes the debugger appearance, toggling black or white colours
+and thin or bold characters;
+* W ("watch") toggles between the emulation debugger and the graphics viewer;
+the cursors, Page Up/Down and key "G" browse the memory, Home and End shrink and
+expand the graphics width, and Tab toggles between horizontal and vertical mode;
+* X toggles the classic/Plus hardware information panel;
+* Y requests a length in bytes and an 8-bit value, then fills the memory with
+said value starting from the current location of the cursor;
+* Z deletes all breakpoints;
+* Space ("step into") runs exactly one operation and stops on the next
+operation;
+	+ Shift+Space runs operations during one whole scanline;
+* Return ("step over") resumes the emulation until reaching the next operation.
+It behaves differently from SPACE if the current instruction performs a call;
+* Escape stops the debugger and resumes the emulation.
+
+Usage of upper and lower case is unimportant; the debugger isn't case sensitive.
+
+## Videos ##
+
+Videos are recorded as XRF files, a middle step (low compression, low CPU usage)
+previous to the generation of conventional video files.
+
+The included tool XRF turns a XRF-type file into an AVI-type file. It works in
+two different ways, one is exclusive of Windows, the other one is general.
+
+When compiling the tool for Windows (it needs the system library AVIFIL32: "gcc
+-lavifil32 -lvfw32 -xc xrf.c -oxrf.exe") and running it (the syntax is "xrf
+source.xrf target.avi ABCD") it will read the file "source.xrf" and generate a
+file named "target.avi" with the help of the codec ABCD, if it's available.
+Running the tool without parameters shows the help and the list of available
+codecs; running it without a target parameter prints the source file's
+parameters. It's advised to install and use the codec ZMBV developed by the
+Dosbox project because it provides the best performance in pixellated recordings
+like these.
+
+In other systems XRF cannot directly use any codec, so the outcome is an AVI
+file without any compression (image is RGB 24 bpp, sound is stereo PCM);
+fortunately, it can generate it through the console by specifying "-" instead of
+"target.avi" and feed this way a video encoding tool, for example FFMPEG: the
+command line "xrf source.xrf - | ffmpeg -i - target.avi" will delegate on FFMPEG
+the task of encoding the AVI file. Read the documentation of FFMPEG on this
+matter.
+
+## ZXSEC ##
+
+ZXSEC is an emulator of the Sinclair Spectrum family (48k, 128k, +2/Plus2 and
++3/Plus3) based on the components it shared with the Amstrad CPC family: the Z80
+microprocessor, the PSG AY-3-8192 sound chip, the tape system and the NEC765
+disc drive controller. It also optionally emulates several add-ons: the Spectrum
+Dandanator extension, the Beta128 disc interface, the Pentagon 128 board, the
+64-colour ULAplus video chip and the AY-Melodik 48k and Covox $FB sound chips.
+
+It spans the files ZXSEC.EXE, SPECTRUM.ROM, SPEC128K.ROM, SPEC-P-2.ROM and
+SPEC-P-3.ROM, and otherwise runs the same as CPCEC, with several differences:
+
+* option -mX chooses one out of four possible models: -m0 (48k), -m1 (128k), -m2
+(+2) or -m3 (+3).
+* option -K enables the Spectrum 16K memory mode (disabled by default) if the
+chosen model is Spectrum 48k;
+* option -X disables the disc drives if the chosen model is Spectrum +3, that
+thus becomes a +2A instead; same outcome can happen on runtime by disabling
+"Settings: Disc controller" and selecting the firmware SPEC-P-3.ROM;
+* options -p and -P enable and disable the Pentagon timings; they can be toggled
+within the emulator with Shift+F6, too;
+* Control+Shift+F8 starts (or stops) the cassette motor, because the CPC
+hardware includes a built-in tape control, while the Spectrum hardware lacks it;
+* SHIFT emulates the CAPS key, CONTROL emulates SYMBOL, BLOQ MAYUS emulates
+CAPS+2 (CAPS LOCK), cursors emulate CAPS+5/6/7/8, TAB emulates CAPS+1 (EDIT) and
+ESCAPE emulates CAPS+SPACE (BREAK);
+* joystick options apply to the Sinclair 2 interface by default; the menu allows
+choosing the type of joystick.
+
+ZXSEC can show Gigascreen effects (for example the demo "Mescaline Synesthesia"
+2009 DeMarche) through the interlace options in the Video menu.
+
+## Acknowledgements ##
+
+This emulator owes its existence to a series of people and societies that are
+listed as follows:
+
+* The firmware files included in the package are Amstrad's properties, who
+allows the emulation of their old computer systems and supports the distribution
+of their firmwares as long as their authorship and contents are respected, and
+whom I wholeheartedly thank for the creation of those magnificent computers and
+the good will towards their emulation.
+* This emulator was my final project for the Computer Engineering postdegree at
+the Distance-Learning National University (Universidad Nacional de Enseñanza a
+Distancia, UNED), a project directed by professor José Manuel Díaz Martínez and
+ultimately awarded a 100% and the right to a honorable mention.
+* The documentation about the system comes from cpcwiki.eu, cpc-power.com,
+cpcrulez.fr and quasar.cpcscene.net.
+* The alpha tests were handled by Denis Lechevalier.
+
+## Appendix: test cases ##
+
+The following list states the one hundred titles that made the bulk of the
+emulator tests during its development. Several titles span more than one test
+(for example "Donkey Kong" is both a protected tape and a middle case of
+multiple image modes at once); they're mentioned in the first type of test.
+
+Diagnostics:
+
+* Z80 Instruction Exerciser ZEXALL (2004 public domain)
+* PLUSTEST (2002 Richard Wilson)
+
+Simple cases:
+
+* Sultan's Maze / Laberinto del Sultán (1984 Gem Software / Amsoft)
+* Oh Mummy (1984 Gem Software / Amsoft)
+* Roland on the Ropes / Fred (1984 Indescomp / Amsoft)
+* Roland in the Caves / La Pulga (1984 Indescomp / Amsoft)
+
+Tape files:
+
+* Unprotected:
+	+ Roland in Time (1984 Gem Software / Amsoft)
+	+ Manic Miner (1985 Software Projects / Amsoft)
+	+ Jet Set Willy (1985 Software Projects / Amsoft)
+	+ Knight Lore (1985 Ultimate)
+	+ Alien 8 (1986 Ultimate)
+* Simple protections:
+	+ Technician Ted (1985 Hewson)
+	+ Abu Simbel Profanation (1986 Dinamic)
+	+ Deflektor (1987 Costa Panayi / Gremlin Graphics)
+	+ Desperado (1987 Topo Soft)
+	+ Humphrey (1988 Made in Spain / Zigurat)
+* Middle protections:
+	+ Donkey Kong (1986 Arcana / Ocean)
+	+ MASK (1987 Gremlin Graphics)
+	+ Operation Wolf (1988 Imagine)
+	+ Rainbow Islands (1989 Graftgold / Ocean)
+* Complex protections:
+	+ Rasputin (1985 Paul Hibbard / Firebird)
+	+ Spiky Harold (1985 A.Rogers / Firebird)
+	+ Druid (1986 Firebird)
+	+ Split Personalities (1986 Domark)
+	+ Last Mission (1986 Opera Soft)
+	+ Marmalade (1987 MBC Informatique)
+	+ Gonzzálezz (1989 Opera Soft)
+	+ Twinworld (1990 Ubi Soft)
+
+Strange cases:
+
+* Z80:
+	+ Sabre Wulf (1985 Ultimate)
+	+ Bigfoot (1989 Codemasters)
+* PIO:
+	+ Nodes of Yesod (1986 Odin)
+	+ Prehistorik (1991 Titus)
+	+ Antiriad / Sacred Armour of Antiriad (1987 Palace Software)
+* Ports:
+	+ Skweek (1989 Loriciels)
+	+ Night Shift (1990 Lucasarts)
+	+ Hero Quest (1991 Gremlin Graphics)
+
+Middle cases:
+
+* Multiple image modes or colour palettes at once:
+	+ Sorcery (1985 Gang of Five / Virgin Games)
+	+ Kong Strikes Back (1985 Ocean)
+	+ Crafton & Xunk (1986 Ere Software)
+	+ Elite (1986 Bell and Braben / Firebird)
+	+ Amaurote (1987 Binary Design / Mastertronic)
+	+ Feud (1987 Binary Design / Mastertronic)
+	+ Gauntlet (1987 Gremlin Graphics)
+	+ Renegade (1987 Arcana / Imagine)
+* Fast smooth hardware scroll:
+	+ TLL / Tornado Low Level (1985 Vortex Software)
+	+ Thing on a Spring (1986 Gremlin Graphics)
+	+ Ghosts'n Goblins (1986 Elite)
+	+ Prohibition (1987 Infogrames)
+* Screen bigger than usual (overscan):
+	+ Arkanoid (1987 Probe / Imagine)
+	+ Arkanoid 2: Revenge of Doh (1988 Imagine)
+* Hardware double buffer:
+	+ Sol Negro (1988 Opera Soft)
+	+ Mutan Zone (1988 Opera Soft)
+	+ Rescate Atlántida (1989 Creep Soft / Dinamic)
+	+ AMC / Astro Marine Corps (1989 Creep Soft / Dinamic)
+* Sampled sound:
+	+ Enigma de Aceps (1986 ACE Software)
+	+ Dragon Ninja (1988 Imagine)
+	+ Robocop (1988 Ocean)
+
+Disc files:
+
+* CP/M 2.2 (1984 Digital Research / Amstrad)
+* CP/M Plus (1985 Digital Research / Amstrad)
+* Abadía del Crimen (1987 Opera Soft)
+* Corsarios (1990 Opera Soft)
+* Ghostbusters 2 (1989 Software Studios / Activision)
+* SWIV (1991 Storm / Sales Curve)
+* Addams Family / La familia Addams (1991 Ocean)
+* 5KB Demo 3 (1999 Duncan + LBB)
+
+Advanced cases:
+
+* Mission Genocide (1987 Paul Shirley / Firebird)
+* Warhawk (1987 Proteus / Firebird)
+* Dynamic Duo (1988 Probe / Firebird)
+* Rastan (1988 Probe / Imagine)
+* Skateball (1988 Ubi Soft)
+* Turrican (1990 Probe / Rainbow Arts)
+
+Amstrad Plus:
+
+* Arnold 5 Diagnostic Rom Version 1.3 (1990 Amstrad)
+* Burnin' Rubber (1990 Ocean)
+* Navy Seals (1990 Ocean)
+* Copter 271 (1991 Loriciel)
+* Fire 'n Forget 2 (1990 Titus)
+* Dick Tracy (1991 Titus)
+* No Exit (1990 Coktel Vision)
+* Robocop 2 (1990 Ocean)
+* Switchblade (1990 Gremlin Graphics)
+* World of Sports (1990 Epyx)
+* 1st Plus Demo (1991 GPA)
+* Eerie Forest (2017 Logon System)
+
+Very advanced cases:
+
+* Turrican 2 (1991 Enigma Variations / Rainbow Arts)
+* Facehugger Megademo (1991 Face Hugger)
+* Zap't'Balls (1992 Amstrad CPC International)
+* Super Cauldron (1992 Titus)
+* Prodatron Megademo (1992 Prodatron)
+* Prehistorik 2 (1993 Titus)
+* Voyage '93 (1993 BENG)
+* Overflow 5 Previews (1994 Overflow)
+* Big'O Full'O Dem'O (1998 Arkos)
+* Byte '98 (1999 Mortel & Overlanders)
+* École Buissonière (2000 Overlanders)
+* DTC (2006 Arkos)
+* Orion Prime (2009 Cargosoft)
+* Edge Grinder (2011 Cosine & Format War)
+* Batman Returns (2011 Batman Group)
+* Bloc Us (2011 Benediction)
+* Super Edge Grinder (2012 Cosine & Format War)
+* R-Type 128 (2012 Easter Egg)
+* Still Rising (2013 Vanity)
+* Yet Another Plasma! (2012 Logon System)
+* Breaking Baud (2015 CRTC & 3LN)
+* Megablasters: Escape from Castle in the Clouds (2015 Project Argon)
+* Imperial Mahjong (2016 Cargosoft)
+* Logon's Run (2017 Logon System)
+* Wunderbar (2017 Arkos & Benediction)
+* Isometrikum (2018 Vanity)
+* Still Scrolling (2018 Music2Eye & Praline)
+* PhX (2018 Condense)
+
+## Version log ##
+
+- 20190314 -- first public release.
+- 20190317 -- second public release. Fixed Win32 joystick bugs: JoyGetPos
+returns ZERO on OK, not on ERROR.
+- 20190318 -- third public release. By default the window shows a menu; new
+option -+ hides it.
+- 20190325 -- fourth public release. Onscreen indicators (hide them with -O);
+fixed bugs in ZXSEC that slowed emulation down when the frameskip wasn't zero,
+and another bug in audio recording on WAV files.
+- 20190331 -- fifth public release. Tapes can be browsed, either by file
+position (WAV and CSW) or by block (CDT, TZX and TAP).
+- 20190404 -- sixth public release. Fixed a Z80 emulation bug in IRQ logic.
+Configuration (computer model and file paths) is kept across sessions in a INI
+file.
+- 20190408 -- seventh public release. Fixed a bug in the YM3 file recording,
+another one in the ZXSEC internal timings, and one more in the debugger commands
+with optional parameters.
+- 20190419 -- eighth public release. Added options for image and sound
+interpolation; tape automatically rewinds itself when it reaches the end (à la
+FUSE); fixed a bug in TZX files that store 0 instead of 8 in the "used bits"
+field, another bug in CUSTOM INFO blocks in TZX files, and another one when
+ZXSEC loads a 48K SNA file in Plus3 mode (users should manually switch to a safe
+model beforehand anyway). INI files now remember the names of the last used
+files.
+- 20190430 -- ninth public release. Softer B/W Spectrum palette; fixed bug in
+FDC sector size calculation if GAP datas are stored (Loriciels' discs); added
+simple memory contention to ZXSEC ("Amaurote", "Black Lamp", "Puzznic", "Sly
+Spy", "Zub"...).
+- 20190524 -- tenth public release. Added support for CDT/TZX file blocks 0x24
+and 0x25 (loop start and ending) (cfr. BATMAN.TZX), fixed bugs in the handling
+of weak sectors in DSK files (cfr. "Titus Classiques"), YM file recording is
+reentrant, fixed a bug in INI files with empty fields and added the option
+`autorewind <0|1>` to rewind (or remove) a tape when playback reaches the end.
+- 20190526 -- minor patch fixing a bug in autorun mode: opening menus and
+switching windows cancelled the automatic keyboard.
+- 20190731 -- eleventh public release. Added a new UI-based debugger (typing
+commands is no longer needed) and support for ZIP archive reading based on
+PUFF.C from the ZLIB project, upgraded GCC to 5.1.0 and removed all `inline`
+tags (they did more harm than good), and generally reworked all internals to
+make them OS-independent. Several details improved as well: the file selector
+fixes a bug in Win10 (and in some cases in Win7), "browse tape" dialog shows the
+file name, Spectrum Plus3 automatically becomes Plus2A to load tapes, `auto
+rewind` shows up in Edit menu and fixes bugs in CSW files, and sound emulation
+has improved, for example "Terminus" on CPC plays sound and "Agent X II" on
+Spectrum is no longer noisy.
+- 20190809 -- minor patch restoring the "silent" discarding (i.e. without error
+codes) of write operations in read-only discs and allowing the automatic booting
+of IBM-formatted discs.
+- 20190817 -- minor patch fixing a crash when booting tapes right when the
+automatic frameskip kicks in.
+- 20190831 -- minor patch fixing several bugs (booting two-sided discs with FLIP
+SIDE option on, recording snapshots or tapes after loading a snapshot or tape
+from a ZIP archive), improving several details (loading snapshots with memory
+compression, emulating up to 576 kB RAM) and redefining the menus (Edit is
+divided into Edit and Settings, Image and Sound become Video and Audio, new
+video filter functions...) and the command line: "-+" now limits the zoom to
+integer values; "-!" inherits the option of hiding the menu.
+- 20191003 -- twelfth public release. Precise (albeit not perfect yet) memory
+contention and ULA noise ("snow") on Spectrum: "48K Timing Tests" passes all
+tests but 36 and 37, and "128K Timing Tests" fails on just six tests. "Mask 3:
+Venom Strikes Back" draws the attribute and border effects on their precise
+locations on all platforms (48K, 128K/Plus2, Plus3) and Software Creations'
+"Black Lamp", "LED Storm" and "Sly Spy" behave well on 128K machines.
+Improvements in the debugger: fixed disassembly panel invalid cursor locations,
+added optional tall characters, avoided debug+pause clashing, new key M toggles
+memory dump ROM+RAM and RAM-only modes. Improved ZIP handling (ZIP archives are
+no longer locked, files within archives are filtered by extension), user
+interface fixes.
+- 20191004 -- minor patch making the debugger options set with V and M stick
+between sessions.
+- 20191117 -- thirteenth public release. More precise emulation of type 1 CRTC
+(by default instead of 0) in CPCEC ("From Scratch", "Pinball Dreams"...) and 48K
+memory contention in ZXSEC ("Starion", "Black Lamp"...). CPCEC also allows
+choosing the length of the V-hold signal (for example "Thunder Blade" needs a
+short signal) and whether horizontal sync must be flexible ("Batman Returns",
+"Pinball Dreams"...) or not ("CPC 30th Anniversary Megademo", "PhX").
+Unfortunately, some demos that worked well in past versions now suffer problems
+that cannot be solved by selecting another CRTC. Removed third joystick button
+in CPCEC, no real joystick ever included it. The ZXSEC joystick is Sinclair 2 by
+default.
+- 20191130 -- minor patch fixing a bug when running CPCEC and ZXSEC on a screen
+shorter than 600 px, another one when recording a WAV file, and another one in
+the port logic of CPCEC ("Knight Rider", OUT &0088,&88 must not reach the Gate
+Array, but "Hero Quest", OUT &00C0,&C0 must reach it). The CRTC types 0 and 2
+have improved ("Face Hugger Ultimate Megademo: Tantrum", "5KB Megademo 3",
+"Power System Megademo: Glooms"...) but cannot handle "Pinball Dreams" yet,
+unlike CRTC types 3 and 4, that together with CRTC1 support this game now.
+- 20191227 -- fourteenth public release. Visual improvements: the green screen
+palette is closer to the original, the vertical filters ("Y-Masking") are
+compatible with the interlaced modes, mixing X-Masking and Y-Masking together
+shows a checkered pattern. Internal improvements: the new traits of the CRTC
+registers 3 and 9 and the delays between the Gate Array, the Z80 and the CRTC
+finally emulate "Pinball Dreams" as a whole for all the CRTC types and solve the
+problems in several demos ("Scroll Factory", "Still Rising", parts of "The
+Demo"...) and games ("Action Fighter", "Storm Warrior", "Usagi Yojimbo"),
+although some titles still need particular CRTCs ("PhX" CRTC0, "Onescreen
+Colonies" CRTC1, etc.) to work correctly.
+- 20191231 -- minor patch fixing a bug in the FDC (bit 6 of SENSE DRIVE STATUS
+must react when the user changes discs: "Fugitif") and a regression in CRTC0
+(detect REG6<REG4 rather than REG6<=REG4: "5KB Megademo 3: Nayad"). Happy new
+year 2020!
+- 20200101 -- minor patch fixing a regression in CRTC0 caused by the previous
+patch ("Scroll Factory", intro of "Pinball Dreams", "Overflow Preview: Part 1")
+and improving its heuristics ("Overflow Preview: Part 3").
+- 20200229 -- fifteenth public release. Added support for Amstrad Plus hardware:
+extended colours, soft scrolling, hardware sprites, programmable raster
+interruptions, DMA channels, ROM cartridges, etc. Added fifty more tape schemes
+to speed up the reading of bytes and even whole blocks. Improvements in the disc
+drive emulation: new discs (by default the DATA format shared by CPC and
+Spectrum Plus3) can be created on the fly, emulation of protected games from
+Design Design ("2112 AD"), The Edge ("Palitron"), Titus ("Prehistorik" and
+"Moktar/Titus the Fox"), bugfixes (READ ID: "5KB Demo 3", "Daley Thompson's
+Olympic Challenge" and "Turbo Copy III"; FORMAT TRACK converts old-style MV -
+CPC discs into new-style EXTENDED ones, and cleans up useless data at the end of
+the disc). CPCEC honours the RAM size (up to 576k) and CRTC type stated by a
+snapshot ("Postscript" demo) and so does ZXSEC, that can read Z80 snapshots now
+and allows 48K SNA files to be either strict (the original format) or relaxed:
+128K headers on 48K data. Control-F2 avoids accidental recording of snapshots
+after a reset. Fixed a bug that happened when combining Y-Masking and Half
+Scanlines. Extended ZIP archive support to handle pipeline-generated (i.e. the
+final headers are the right ones) archives. Sources are distributed together
+with the binaries instead of being delivered upon demand.
+- 20200307 -- minor patch avoiding a hang in globbing(), improving snapshot
+compatibility (WinAPE and ACE employ slightly different CPC+ blocks) and
+removing several useless details. The optional firmware packages now include the
+corresponding cartridges.
+- 20200314 -- first anniversary! minor patch fixing issues in the Plus demos
+"CRTC3" and "Eerie Forest" for Amstrad Plus.
+- 20200331 -- minor patch providing further fixes for Plus demos "CRTC3" and
+"Synergy 4" (top left sprites disappear after few seconds, though) and adding
+the command Shift+Space (skip scanline) to the debugger.
+- 20200404 -- minor patch fixing the DMA handler (all commands but LOAD can be
+combined together) and removing several "kludges" for Plus but the one for
+"Black Sabbath": thanks to Norecess464 for locating the bug. Also, -C now
+becomes -C0..4.
+- 20200406 -- minor patch adding partially multiplexed Plus sprite rendering:
+"Synergy 4" recovers its top left sprites.
+- 20200418 -- minor patch with improvements in the interrupt counter (it starts
+with the first HSYNC fall after the VSYNC rise -"Onescreen Colonies"- unless on
+Plus where it can start when the VSYNC rise happens together with the HSYNC
+fall: "Black Sabbath"), the hardware ports (PIO port A returns zero when reading
+it in write mode unless on Plus where it returns 255 -"Tire au Flan"-, PIO port
+B must set VSYNC in the middle of the screen when the CRTC requests it -"Chany
+Dream End Megademo"- and the Gate Array's 0-191 byte range requires a more rigid
+port logic -"Overflow Preview 3"-) and the debugger: disassembly parameters are
+vertically aligned and the hardware information panel is aligned to the ASCII
+memory dump. Fixed a bug in the ZIP archive header seeker, too.
+- 20200420 -- minor patch fixing the HSYNC signals' black stripes from "Chany
+Dream End Megademo" on CRTC1, "Onescreen Colonies" on CRTC0, etc., as well as
+the value of MEMPTR in JR cc,$RR and DJNZ $RR and the logic of BIT n,r,(IX+$XX):
+the error rates of ZXSEC in the 2012 RAXOFT tests are Z80FULL 10/152, Z80CCF
+70/152 and Z80MEMPTR 4/152.
+- 20200430 -- sixteenth public release. Now you can compile CPCEC and ZXSEC with
+SDL2 (featuring its own graphical user interface) for multiple operating systems
+through the option -DSDL_MAIN_HANDLED; the precompiled files CPCEC.ELF and
+ZXSEC.ELF for 32bit GNU/Linux are included, too. New support for extended ROM
+profiles through INI files enumerating up to 257 16K ROM blocks. Further Z80
+tweaks: the new error rates of ZXSEC in the 2012 RAXOFT tests are 8/152 Z80FULL,
+5/152 Z80CCF and 0/152 Z80MEMPTR.
+- 20200503 -- minor patch improving the behavior of the Z80 operations INI, IND,
+INIR, INDR, OUTI, OUTD, OTIR and OTIR: the 2012 RAXOFT tests (Z80CCF, Z80FULL
+and Z80MEMPTR) score zero errors. Slightly more precise automatic frameskip.
+- 20200505 -- minor patch focused on the SDL2 toolkit: fixed a bug when
+confirming overwriting files, and improved file browsing across directories by
+pointing by default to the previous directory.
+- 20200509 -- minor patch improving the synchronisation between Z80 and video on
+ZXSEC: the ULA48 test already worked before, but ULA128 had problems; now both
+work well. Added the option -W (use the full screen rather than a window) and
+improved the SDL2 handling of bigger windows.
+- 20200603 -- seventeenth public release. Added stereo sound. Fixed a bug in the
+CPC PIO (the read-only mode of port A allowed writing), another bug in the tape
+analysis (CPCEC: the algorithm for TITUS caused trouble in "The Blues Brothers";
+ZXSEC: Speedlock5 didn't recognize the heading noise; both systems add patches
+to shorten the initial delays), another one in the loading of CPC snapshots (a
+snapshot saved on Plus hardware without the "CPC+" block showed a completely
+black palette), another one in the Z80 debugger (the command 'P' could generate
+an infinite disassembly), another one on tape handling (reading a WAV file must
+use >128 as reference instead of >=128) and some problems in Win32 (the screen
+stopped updating after pausing, switching windows in and out) and SDL2 (boot
+message errors weren't shown; the filename sorting algorithm was slow).
+- 20200606 -- minor patch with surround sound: the user can set the channel
+separation to 0% (mono), 50% (surround) or 100% (stereo).
+- 20200616 -- minor patch adding several tape analyses and removing the patch
+that shortened the initial delays (it caused problems). Several changes in SDL2
+(fewer warnings, disc drive cache in Win32) and in the Z80 debugger (more
+content: 256 bytes of memory dump and 32 bytes of stack).
+- 20200622 -- minor patch reducing memory footprint (extra ROM memory is only
+allocated if the user loads a "profile"), rendering SYNC signals as black rather
+than as the current border, and fixing the 3D cylinders part of "PhX" on CRTC1;
+the "ball worms" and the final scroller stay bad on CRTC3 and CRTC4, though.
+- 20201010 -- eighteenth public release. Fully rewritten CRTC logic, with an
+internal event system that extends demo compatibility (for example "Chapelle
+Sixteen", "Madness Demo" and "S&KOH" for CRTC1) and a fully multiplexed Plus
+sprite renderer. More disc protections (ERE, UBI) are supported, WRITE DELETED
+DATA updates the corresponding flag in the sector table. New Dandanator support,
+read-only ("Sword of Ianna"). Preliminary Playcity support, limited to the two
+extra PSG and the NMI trigger. New video recording based on an intermediary
+format XRF, and including a tool allowing to convert it into AVI files.
+Improvements in the SDL2 interface, with a bigger font (12px rather than 8px)
+and vertical alignment in menu keyboard shortcuts. Added new debugging functions
+(looking at graphics in memory with key "W", trapping the opcode $EDFF as a
+breakpoint, etc.) and moved breakpoints from "T" to "." . Removed CPCEC.ELF and
+ZXSEC.ELF as they're bound to a single OS (Linux Mint 18 32bit) and the user
+must compile the binaries anyway. Moved the configuration files in non-Windows
+systems from CPCEC.INI and ZXSEC.INI to .cpcecrc and .zxsecrc as customary on
+Unix. Tweaks for CLANG compatibility.
+- 20201012 -- minor patch adding mouse support to the user interface for SDL2.
+- 20201020 -- minor patch fixing a bug in the Dandanator support (the "LD
+(IY+n),A/B/C" operations must work with any "n" value, instead of just 0: thanks
+to Spirax for the report) and another one in the CRTC (counter HCC is 8 bits
+long: "Camembert Meeting 4 Demo" stops showing a line of garbage between the top
+and the middle panels), adding SDL2_DOUBLE_QUEUE as an optional SDL2 compilation
+flag (some systems need an audio buffer longer than the default 8 frames) and
+using a different pixel pattern when both X-Masking and Y-Masking are enabled.
+- 20201022 -- minor patch adding mouse wheel support to the SDL2 user interface
+and an option to set whether disc write conflicts in CPCEC and ZXSEC are strict
+(they raise errors) or relaxed (they do nothing).
+- 20201024 -- minor patch solving a problem in the SDL_WINDOWEVENT_EXPOSED
+event, inverting the black/white bits in ZXSEC's graphics viewer and pointing
+CPCEC's viewer at RAM rather than ROM.
+- 20201028 -- minor patch improving Issue-2 emulation on Spectrum 48K: "Abu
+Simbel Profanation" and "Rasputin 48K" work on 48K Issue 2 and fail on the other
+models, as expected.
+- 20201111 -- minor patch adding mouse tracking to the SDL2 interface and making
+XRF file recording less memory-consuming.
+- 20201122 -- minor patch fixing a crash when using the SDL2 interface to save a
+file in the root path, and enabling automatic SDL2 detection on compile time.
+- 20201124 -- minor patch adding AMSDOS header detection to ROM profile loading,
+following an idea from Sid.
+- 20201130 -- minor patch further extending ROM profile loading with four new
+fields: "type", "bank", "crtc" and "fddc".
+- 20201212 -- nineteenth public release. The Windows version can use DirectDraw
+instead of GDI, and the SDL2 version uses Textures instead of Surfaces:
+performance rises when hardware acceleration is available. Just in case,
+however, command line parameter `-!` and the menu option "Video: Software
+render" can be used to disable the hardware acceleration in systems where it's
+missing or performs worse than pure software. CPC bugfix: PSG handles register
+14 separately, as expected by "Gremlins (v1)". Spectrum bugfix: 128K ghost ports
+are properly emulated, the demo "Tiratok" plays music at last. New debug command
+"Y": fill memory with byte. XRF lists the available codecs on Windows when
+launched without parameters.
+- 20201215 -- minor patch fixing snapshot loading on Spectrum Plus3 and
+extending the ULA's "snow" behavior ("Vectron") and scope ("Narco Police",
+"Robocop 3"). The SDL2 UI appends an ellipsis to filenames that are too long to
+fit within the dialogs.
+- 20201220 -- minor patch removing the obsolete console-based debugger from the
+sources and making the Playcity option stick between sessions. "Software render"
+is now "Acceleration", as the former was counterintuitive.
+- 20210105 -- minor patch fixing a bug in video recording (it turned 44KHz
+stereo into 88KHz mono) and tape playback (16 and 24 bit WAV files were
+improperly supported), extending the joystick support to handle directional
+controls (thanks to Pelrun for the Win32 and SDL2 code) and letting the
+Dandanator emulation modify the cartridge (configuration, savestates...) if the
+user allows it.
+- 20210107 -- minor patch fixing a bug in the ASIC's screen split trigger (SSSL
+must be checked when HSYNC rises, rather than when HDISP rises) and a glitch in
+the Win32 joystick support, and making the Playcity CTC more responsive.
+- 20210114 -- minor patch improving Playcity stereo autodetection ("Alcon 2020"
+uses the left chip only), adding ROM simulation to Dandanator cartridges ("CPC
+Soccer") and fixing a bug in Z80 instruction CPI introduced in version 20210105
+(RAXOFT tests) and another one in the CRTC1 VSYNC length ("Pheelone").
+- 20210115 -- minor patch fixing a bug in the CPC PIO: "Inertie" sends a value
+to port A, then reads the same value back instead of receiving a PSG register or
+keyboard bits.
+- 20210127 -- minor patch fixing bugs in the Spectrum timing ("LD (IX+n1),n2"
+and Z80_PRAE_SEND: thanks to Azesmbog for the FPGA test report) and the CPC tape
+analysis (conflict between Mikrogen and Hi-Tec).
+- 20210129 -- minor patch fixing a bug in the CPC PIO ("Super Cars" had stopped
+working in version 20210115) and improving CRTC1 compatibility (first part of
+"Ecstasy Demo").
+- 20210219 -- minor patch adding a new option, "Video: Blend scanlines" that
+handles Gigascreen effects (Spectrum demos "Mescaline Synesthesia" and
+"Tiratok", CPC demos "Batman Forever" and "Mad Leprechaun") and changing the
+sound synchronisation in SDL2. The AY chip noise generator is now a LFSR. SNA
+files saved from Spectrum Plus3 set bit 4 of byte 0x0C01E to state that the
+snapshot requires a Plus3 (Easter egg "Hello There I'm a +3"). The CPC debugger
+adds an information panel (key 'X') for Dandanator status, and its graphics
+viewer can show MODE 2 images.
+- 20210418 -- twentieth public release. Pixel and scanline filters are now
+saturation-based (colour aberration, desaturation) rather than luminosity-based
+(horizontal blur, shading). Fixed bug in XRF-to-AVI recording: VFW32 operations
+always assumed 16-bit stereo. The film recording options "High resolution" and
+"High framerate" now stick between sessions, and the first one also applies to
+BMP screenshots. Added support for block types 0x19 and 0x4B in CDT/TZX tape
+files, as well as the new disc option "Read-only as default" so the user can
+choose whether discs are by default read-only or read-write, and this option
+stacks together with the already extant "Strict disc writes". Added new option
+"Flip joystick buttons" to CPCEC so users can swap the value of the two CPC
+joystick buttons, as suggested by SB1903. PSG emulation now catches overflows,
+regardless of whether they're programming errors (music distortion in "Thing on
+a Spring") or done on purpose (pipe sound effect in "Thing Bounces Back"). Fixed
+bug in ZXSEC's Plus3 memory contention ("Firefly" disc release) and improved the
+beeper (oversampling: Utz's "Quattropic"). ZXSEC snapshot handling is now more
+strict or flexible (changing models as often or as seldom as possible) depending
+on the option "Strict SNA files".
+- 20210428 -- minor patch fixing bugs in several tape fastloaders and in the
+firmware INI handler (spaces must be trimmed on both sides of each string), and
+adding inverse video 8-bit characters to the debugger's memory dump.
+- 20210522 -- minor patch fixing bugs in the ASIC (modifying the SSCR has an
+immediate impact; SSSL is checked when HCC==R1 rather than when HCC==R0;
+reported by NoRecess), the PSG (register 15 is valid, even if the hardware
+doesn't use it: the Plus demo "Phat" plays its music properly now), the Z80 (EI
+always delays the next IRQ, no matter the previous state of the interrupt enable
+flag, and OUTI sends the OUT signal during its last microsecond rather than
+during the second-to-last; "KKB First" demo needed both fixes to run correctly;
+reported by Hicks) and the FDC (errors imply delays that must be emulated: the
+original protected disc of "Bad Cat" accidentally relies on this; reported by
+Dlfrsilver). The debugger accepts very simple expressions (additions and
+substractions) when entering 16-bit values (address of "Go To", length of
+"Output"...) and the integer zoom allows 50% steps rather than 100% because the
+default size is technically 200% rather than 100%.
+- 20210524 -- minor patch fixing bugs in film recording: field size errors on
+64-bit machines, improper AVI header sound sample size on 8-bit output (both
+reported by Cpcitor), and accumulated dirt between multiple recordings within
+the same session. XRF also shows the length of the output file.
+- 20210526 -- minor patch aligning the X-Masking video effect to the right
+instead of the left. The debugger expressions accept three new operators: &
+(AND), | (OR) and ^ (XOR). XRF shows the output file's accurate byte length
+rather than just the megabytes, and running it without a target parameter prints
+the source video parameters and the expected size.
+- 20210609 -- minor patch adding lightgun emulation for CPC (Trojan, Gunstick
+and Westphaser on joystick port) and Spectrum (Gunstick on Sinclair 1 and
+Kempston ports), recreating a CRTC0 quirk (when R6==0 a single scanline is
+shown, rather than none as in other CRTC types) and improving the choice of the
+filler colour when half scanlines are on. The SDL2 version now handles mouse
+clicks when the button is up to improve consistency with other user interfaces.
+Tape acceleration options stick between sessions.
+- 20210624 -- minor patch adding Spectrum Dandanator support, and making both
+emulators able to load Dandanator cartridges from the command line and the key
+F3. Several heuristics ensure that the cartridges match the current system.
+- 20210626 -- minor patch fixing several format errors ("%i" in place of "%d" or
+"%u" and so on), a bug in the CRTC (3D cylinders part of "PhX" on CRTC3) and
+another one in the Spectrum Dandanator ("LD (DE),A" trap). Slightly safer
+snapshot block loading on both CPCEC and ZXSEC.
+- 20210730 -- minor patch adding mouse support to the debugger and fixing bugs
+in the ASIC (modifying register 9 tests whether the new value is equal or lower
+than its counter, horizontal splitting doesn't draw garbage or retrigger IRQs:
+final scroller of "PhX") and the CRTC: reading the wrong port no longer returns
+the right value (secret part of "École Buissonière") and HSYNC events are
+filtered more carefully ("Chany Dream Demo 5", "Madness Demo", "Sub Hunter"...)
+unless the user prefers the old behavior ("Hard H-Hold" option). Several menu
+items have been relocated to set hardware traits and emulation options apart.
+CPCEC saves compressed memory blocks within snapshots unless "Strict SNA files"
+is enabled.
+- 20210831 -- minor patch adding performance improvements to TZX/CDT playback
+and emulation of the Turbo Sound musical extension for ZXSEC, and removing the
+"Hard H-Hold" option from CPCEC, now useless thanks to further CRTC tweaks and
+the incipient emulation of the LA-7800 chip. The Windows version fixes a bug in
+joystick allocation, the SDL2 version understands UTF-8 filesystems and its user
+interface is a little more agile, and both versions can open GZIP archives and
+fix bugs in temporary file handling and YM file logging. CPCEC got a new icon.
+- 20210909 -- minor patch fixing bugs in the video render logic of ZXSEC,
+effectively ensuring that the multicolour effects seen in the tests ULA48,
+ULA128, FPGA48 and FPGA128 and the games made with the Nirvana engine
+("Dreamwalker", "Multidude", "Stormfinch", "Sunbucket"...) show properly, and
+adding new audio extensions for CPCEC (Digiblaster audio) and ZXSEC (Covox $FB
+DAC) plus preliminary emulation of Pentagon 128 timings and (if the TRDOS.ROM
+file is available) the Beta128 disc drive and its TRD and SCL files.
+- 20210930 -- minor patch fixing several bugs in the Z80 (ZXSEC now passes new
+Spectrum tests such as 48KNEC, EIHALT, IRCONT, BBG48 and BBG128, thanks to
+Azesmbog, Dunny, Woody and ZJoyKiLer), a glitch in the CRTC (the HSYNC filter
+required by "Onescreen Colonies" and "Scroll Factory" was harming "Paradise
+Megademo part 2" and others) and another one in the AY chip ("Stormbringer" for
+CPC needs more leeway than "Terminus"), improving the autorun logic and tape
+speedup of both CPCEC and ZXSEC, and adding the 64-colour ULAplus extension for
+Spectrum, as well as the ability to read SP and SZX snapshots.
+- 20211004 -- minor patch fixing a bug in ZXSEC, the Z80 snapshot loader wasn't
+checking properly the integrity of 48K compressed blocks.
+- 20211105 -- minor patch adding PZX file support to ZXSEC and reorganising the
+tape handling code (the TZX1 blocks JUMP, CALL and RETURN from are properly
+handled), improving the Pentagon video logic ("Across the Edge" and "Rage" show
+their pixel-precise border effects), making the CPCEC option "Strict SNA files"
+write V2 snapshots when enabled, and simplifying the $EDA0-$EDBB Z80 opcode
+block. Experimental compile-time options include saving SZX snapshots from ZXSEC
+and reading Kansas City blocks from CDT and TZX files.
+- 20211111 -- minor patch fixing a bug in TZX playback that made all tapes after
+the first one lose the first item in the first block, adding basic DMA-PIO
+contention to the CPC Plus ASIC and improving the Spectrum floating bus: the
+tests HALT2INT (48K) and FLOATSPY (48K and 128K) work properly now.
+- 20211119 -- minor patch adding a new entry in the Audio menu ("Audio
+acceleration") to set whether the audio buffer length is short (lower latency)
+or long (more compatible). The Plus ASIC DMA-PIO contention is a little more
+precise. Tapes for Spectrum avoid several unwanted coincidences ("Advanced
+Soccer Simulator" and "Banger Racer", found by Raúl). The help screens are a
+little more explicit, the WAV file output is always lil-endian even if the
+system is big-endian, the pixel filter and the scanline blend are faster, and
+the SDL2 user interface becomes white-on-black with the parameter `-$`.
+- 20211130 -- minor patch adding a global speed option (for example "Settings:
+2x realtime speed" makes the emulation run at twice the base speed) and
+relocating the Z80 speed option ("CPU clock") to the "Machine" submenu; it also
+fixes bugs in tapes (the starting pause in CDT/TZX files no longer worked) and
+the user interface (drag-and-drop had stopped handling ZIP archives: reported by
+Raúl). New Spectrum 16K option, both in the command line (`-K`, no longer used
+to disable the AY chip) and the menu. Experimental support for BRKS blocks
+(breakpoint tables) when saving and loading CPC snapshot files; to ease deleting
+the breakpoints they they're no longer required, key Z can delete them all at
+once from any panel in the debugger, instead of only from the disassembly panel.
+- 20211217 -- twenty-first public release. Important changes in video emulation:
+all parts of the 2021 rerelease of "Amazing Megademo" work on all CRTCs in
+CPCEC, thanks to Longshot's new monumental handbook "Amstrad CPC CRTC
+Compendium", and titles that check the floating bus through ULA-contended ports
+such as "A Yankee in Iraq" run properly in ZXSEC, even on Plus3. The AY chip has
+been rewritten to ensure that Playcity (CPC) and Turbosound (Spectrum) share the
+exact clock with the main audio chips (6-channel music on Pentagon is no longer
+off-key), and stereo channels are more flexible now, switching between the
+default ABC stereo setup and the ACB setup of AY-Melodik; audio oversampling now
+relies on system clock ticks instead of output samples. Minor fixes in the FDC
+logic (protected rereleases of "Arkanoid 2" and "Renegade" expect the disc to
+keep moving while the SENSE INTERRUPT STATUS command takes place), the ZIP
+archive reader (hidden files must stay invisible) and the WAV and AVI file
+handling (proper 2-byte alignment must be performed in the extremely rare cases
+where the length of a block is odd). V-hold options in CPCEC have been merged
+into one (disabling "Standard V-hold" extends the vertical sync both up and
+down), and the paired options PlayCity/Digiblaster (CPCEC) and Turbosound/Covox
+$FD (ZXSEC) are mutually exclusive.
