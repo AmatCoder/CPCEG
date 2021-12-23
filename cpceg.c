@@ -184,6 +184,15 @@ gtk_quit (GtkWidget *object, gpointer data)
 
 
 void
+show_about (GtkWidget *object, gpointer window)
+{
+  int result = gtk_dialog_run (GTK_DIALOG (window));
+
+  gtk_widget_hide (window);
+}
+
+
+void
 gtk_create_window_new (void)
 {
   gtk_init (NULL, NULL);

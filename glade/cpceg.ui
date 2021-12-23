@@ -27,6 +27,51 @@ Author: AmatCoder
   <!-- interface-name CPCEG -->
   <!-- interface-copyright 2021 AmatCoder -->
   <!-- interface-authors AmatCoder -->
+  <object class="GtkAboutDialog" id="about_window">
+    <property name="can_focus">False</property>
+    <property name="modal">True</property>
+    <property name="destroy_with_parent">True</property>
+    <property name="type_hint">dialog</property>
+    <property name="skip_taskbar_hint">True</property>
+    <property name="skip_pager_hint">True</property>
+    <property name="program_name">CPCEG</property>
+    <property name="version">0.1</property>
+    <property name="copyright" translatable="yes">2018-2021 © Cesar Nicolas-Gonzalez
+2021 © AmatCoder
+
+Amstrad have kindly given their permission for the redistribution of their copyrighted material but retain that copyright.
+</property>
+    <property name="comments" translatable="yes">An emulator of the family of home microcomputers Amstrad CPC</property>
+    <property name="website">https://github.com/AmatCoder/CPCEG</property>
+    <property name="authors">Cesar Nicolas-Gonzalez (Emulation)
+AmatCoder (GUI)</property>
+    <property name="logo">../cpcec.png</property>
+    <property name="license_type">gpl-3-0</property>
+    <child internal-child="vbox">
+      <object class="GtkBox">
+        <property name="can_focus">False</property>
+        <property name="orientation">vertical</property>
+        <property name="spacing">2</property>
+        <child internal-child="action_area">
+          <object class="GtkButtonBox">
+            <property name="can_focus">False</property>
+            <property name="layout_style">end</property>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <placeholder/>
+        </child>
+      </object>
+    </child>
+    <child type="titlebar">
+      <placeholder/>
+    </child>
+  </object>
   <object class="GtkWindow" id="main_window">
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">CPCEG</property>
@@ -87,7 +132,7 @@ Author: AmatCoder
               <object class="GtkMenuItem">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="label" translatable="yes">_Edit</property>
+                <property name="label" translatable="yes">_Machine</property>
                 <property name="use_underline">True</property>
               </object>
             </child>
@@ -131,6 +176,7 @@ Author: AmatCoder
                         <property name="can_focus">False</property>
                         <property name="label" translatable="yes">About</property>
                         <property name="use_underline">True</property>
+                        <signal name="activate" handler="show_about" object="about_window" swapped="no"/>
                       </object>
                     </child>
                   </object>
