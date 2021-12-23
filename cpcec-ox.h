@@ -1,8 +1,8 @@
  //  ####  ######    ####  #######   ####    ----------------------- //
 //  ##  ##  ##  ##  ##  ##  ##   #  ##  ##  CPCEC, plain text Amstrad //
-// ##     ##  ## ##     ## #   ##     CPC emulator written in C //
-// ##     #####  ##     ####   ##     as a postgraduate project //
-// ##     ##     ##     ## #   ##     by Cesar Nicolas-Gonzalez //
+// ##       ##  ## ##       ## #   ##       CPC emulator written in C //
+// ##       #####  ##       ####   ##       as a postgraduate project //
+// ##       ##     ##       ## #   ##       by Cesar Nicolas-Gonzalez //
 //  ##  ##  ##      ##  ##  ##   #  ##  ##  since 2018-12-01 till now //
  //  ####  ####      ####  #######   ####    ----------------------- //
 
@@ -18,6 +18,7 @@
 #endif
 
 #include <SDL2/SDL.h>
+#include "cpceg.h"
 
 #ifdef _WIN32
   #define STRMAX 288 // widespread in Windows
@@ -332,6 +333,8 @@ void session_redraw(int q) // redraw main canvas (!0) or user interface (0)
       debug_frame=t;
     else
     {
+      gtk_update_cairo_surface ((unsigned char*)t, VIDEO_OFFSET_X, VIDEO_OFFSET_Y, dummy);
+
       dummy=video_target-video_frame; // the old cursor...
       video_frame=t;
       video_target=video_frame+dummy; // ...may need to move!
@@ -1412,6 +1415,10 @@ INLINE char *session_create(char *s) // create video+audio devices and set menu;
   *t=0;
   SDL_StartTextInput();
   session_clean(); session_please();
+
+  gtk_create_window_new();
+  SDL_HideWindow (session_hwnd);
+
   return NULL;
 }
 
@@ -1445,6 +1452,9 @@ int session_pad2bit(int i) // translate motions and buttons into codes
 }
 INLINE int session_listen(void) // handle all pending messages; 0 OK, !0 EXIT
 {
+  if (gtk_loop() == 1)
+    return 1;
+
   static int s=0; if (s!=session_signal) // catch DEBUG and PAUSE
     s=session_signal,session_dirty=1;
   if (session_signal&(SESSION_SIGNAL_DEBUG|SESSION_SIGNAL_PAUSE))
