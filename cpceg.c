@@ -213,15 +213,17 @@ gtk_create_window_new (void)
 
   gtk_widget_show_all (mainwindow);
 
-  while (gtk_events_pending ())
+  while (gtk_events_pending())
     gtk_main_iteration();
+
+  gtk_widget_queue_draw (drawing_area);
 }
 
 
 int
 gtk_loop (void)
 {
-  while (gtk_events_pending ())
+  while (gtk_events_pending())
     gtk_main_iteration();
 
   if (quit)

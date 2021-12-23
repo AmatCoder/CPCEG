@@ -1289,7 +1289,7 @@ INLINE char *session_create(char *s) // create video+audio devices and set menu;
   SDL_GetVersion(&sdl_version); sprintf(session_version,"%d.%d.%d",sdl_version.major,sdl_version.minor,sdl_version.patch);
   if (SDL_Init(SDL_INIT_EVENTS|SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_TIMER|SDL_INIT_JOYSTICK|SDL_INIT_GAMECONTROLLER)<0)
     return (char*)SDL_GetError();
-  if (!(session_hwnd=SDL_CreateWindow(NULL,SDL_WINDOWPOS_UNDEFINED,SDL_WINDOWPOS_UNDEFINED,VIDEO_PIXELS_X,VIDEO_PIXELS_Y,0))
+  if (!(session_hwnd=SDL_CreateWindow(NULL,SDL_WINDOWPOS_UNDEFINED,SDL_WINDOWPOS_UNDEFINED,VIDEO_PIXELS_X,VIDEO_PIXELS_Y,SDL_WINDOW_HIDDEN))
     ||!(video_blend=malloc(sizeof(VIDEO_UNIT)*VIDEO_PIXELS_Y/2*VIDEO_PIXELS_X)))
     return SDL_Quit(),(char*)SDL_GetError();
   if (session_hardblit=1,session_softblit||!(session_blitter=SDL_CreateRenderer(session_hwnd,-1,SDL_RENDERER_ACCELERATED)))
@@ -1418,7 +1418,6 @@ INLINE char *session_create(char *s) // create video+audio devices and set menu;
 
   gtk_create_window_new();
   gtk_set_kbd ((unsigned char*)kbd_bit);
-  SDL_HideWindow (session_hwnd);
 
   return NULL;
 }
