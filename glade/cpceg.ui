@@ -32,8 +32,8 @@ Author: AmatCoder
     <property name="title" translatable="yes">CPCEG</property>
     <property name="has_resize_grip">True</property>
     <signal name="destroy" handler="gtk_quit" swapped="no"/>
-    <signal name="key-press-event" handler="key_press" swapped="no"/>
-    <signal name="key-release-event" handler="key_release" swapped="no"/>
+    <signal name="key-press-event" handler="key_event" swapped="no"/>
+    <signal name="key-release-event" handler="key_event" swapped="no"/>
     <child>
       <object class="GtkBox">
         <property name="visible">True</property>

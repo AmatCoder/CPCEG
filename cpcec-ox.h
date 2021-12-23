@@ -1417,6 +1417,7 @@ INLINE char *session_create(char *s) // create video+audio devices and set menu;
   session_clean(); session_please();
 
   gtk_create_window_new();
+  gtk_set_kbd ((unsigned char*)kbd_bit);
   SDL_HideWindow (session_hwnd);
 
   return NULL;
