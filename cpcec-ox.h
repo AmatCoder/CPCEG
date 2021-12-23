@@ -1416,6 +1416,7 @@ INLINE char *session_create(char *s) // create video+audio devices and set menu;
   SDL_StartTextInput();
   session_clean(); session_please();
 
+  SDL_SetHint (SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
   gtk_create_window_new();
   gtk_set_kbd ((unsigned char*)kbd_bit);
 
