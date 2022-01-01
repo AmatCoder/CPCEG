@@ -104,7 +104,7 @@ AmatCoder (GUI)</property>
                         <property name="can_focus">False</property>
                         <property name="label" translatable="yes">Open any file...</property>
                         <property name="use_underline">True</property>
-                        <signal name="activate" handler="load_any_file" object="main_window" swapped="no"/>
+                        <signal name="activate" handler="load_any_file" swapped="no"/>
                         <accelerator key="o" signal="activate" modifiers="GDK_CONTROL_MASK"/>
                       </object>
                     </child>
@@ -130,7 +130,8 @@ AmatCoder (GUI)</property>
                                 <property name="can_focus">False</property>
                                 <property name="label" translatable="yes">Load snapshot...</property>
                                 <property name="use_underline">True</property>
-                                <signal name="activate" handler="snap_file" object="main_window" swapped="no"/>
+                                <signal name="activate" handler="snap_file" swapped="no"/>
+                                <accelerator key="F3" signal="activate"/>
                               </object>
                             </child>
                             <child>
@@ -140,6 +141,7 @@ AmatCoder (GUI)</property>
                                 <property name="label" translatable="yes">Load last snapshot</property>
                                 <property name="use_underline">True</property>
                                 <signal name="activate" handler="snap_last" swapped="no"/>
+                                <accelerator key="F3" signal="activate" modifiers="GDK_CONTROL_MASK"/>
                               </object>
                             </child>
                             <child>
@@ -148,7 +150,8 @@ AmatCoder (GUI)</property>
                                 <property name="can_focus">False</property>
                                 <property name="label" translatable="yes">Save snapshot...</property>
                                 <property name="use_underline">True</property>
-                                <signal name="activate" handler="snap_file" object="main_window" swapped="no"/>
+                                <signal name="activate" handler="snap_file" swapped="no"/>
+                                <accelerator key="F2" signal="activate"/>
                               </object>
                             </child>
                             <child>
@@ -158,6 +161,7 @@ AmatCoder (GUI)</property>
                                 <property name="label" translatable="yes">Save last snapshot</property>
                                 <property name="use_underline">True</property>
                                 <signal name="activate" handler="snap_last" swapped="no"/>
+                                <accelerator key="F2" signal="activate" modifiers="GDK_CONTROL_MASK"/>
                               </object>
                             </child>
                           </object>

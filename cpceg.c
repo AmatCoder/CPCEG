@@ -28,13 +28,14 @@
 #define TARGET_RES_X (NATIVE_RES_X * 2)
 #define TARGET_RES_Y (NATIVE_RES_Y * 2)
 
-static unsigned char *kbd;
 
+static GtkWidget *mainwindow;
 static cairo_surface_t *surface = NULL;
 static gboolean quit = FALSE;
 static GtkWidget *sbar1;
 static GtkWidget *sbar3;
-static gchar* last_snap = NULL;
+
+static unsigned char *kbd;
 
 // exported
 int any_load (char *s, int q);
@@ -149,105 +150,17 @@ snap_last (GtkWidget *object, gpointer parent)
 {
   const gchar* mode = gtk_menu_item_get_label ((GtkMenuItem*) object);
 
-  if (last_snap != NULL)
-  {
-    if (mode[0] == 'S')
-      snap_save (last_snap);
-    else
-      snap_load (last_snap);
-  }
-}
-
-
-void
-snap_file (GtkWidget *object, gpointer parent)
-{
-  GtkWidget *dialog;
-  gchar* title;
-  gchar* button;
-  GtkFileChooserAction action;
-
-  const gchar* mode = gtk_menu_item_get_label ((GtkMenuItem*) object);
   if (mode[0] == 'S')
-  {
-    action = GTK_FILE_CHOOSER_ACTION_SAVE;
-    title = "Save...";
-    button = "_Save";
-  }
+    session_user (0x0300);
   else
-  {
-    action = GTK_FILE_CHOOSER_ACTION_OPEN;
-    title = "Open...";
-    button = "_Open";
-  }
-
-  dialog = gtk_file_chooser_dialog_new (title,
-                                        (GtkWindow*) parent,
-                                        action,
-                                        button,
-                                        GTK_RESPONSE_ACCEPT,
-                                        "_Cancel",
-                                        GTK_RESPONSE_CANCEL,
-                                        NULL);
-
-  gtk_file_chooser_set_do_overwrite_confirmation ((GtkFileChooser*)dialog, TRUE);
-
-  session_user (0x0F00);
-
-  if (gtk_dialog_run ((GtkDialog*) dialog) == ((gint) GTK_RESPONSE_ACCEPT))
-  {
-    gchar* filename = gtk_file_chooser_get_filename ((GtkFileChooser*) dialog);
-
-    if (filename != NULL)
-    {
-      int e = 0;
-      if (mode[0] == 'S')
-        e = snap_save (filename);
-      else
-        e = snap_load (filename);
-
-      if (e == 0)
-      {
-        g_free (last_snap);
-        last_snap = g_strdup (filename);
-      }
-      else printf ("Error\n");
-
-      g_free (filename);
-    }
-  }
-
-  gtk_widget_destroy (dialog);
-  session_user (0x0F00);
+    session_user (0x0300);
 }
 
 
-
-void
-load_any_file (GtkWidget *object, gpointer parent)
+static gchar*
+dialog_run (GtkWidget* dialog)
 {
   gchar* filename = NULL;
-  GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_OPEN;
-
-
-  GtkWidget *dialog;
-
-  dialog = gtk_file_chooser_dialog_new ("Select...",
-                                        (GtkWindow*) parent,
-                                        action,
-                                        "_Open",
-                                        GTK_RESPONSE_ACCEPT,
-                                        "_Cancel",
-                                        GTK_RESPONSE_CANCEL,
-                                        NULL);
-
-
-  GtkFileFilter *filter = gtk_file_filter_new ();
-  gtk_file_filter_add_pattern (filter, "*");
-  gtk_file_filter_set_name (filter,"All files");
-
-  gtk_file_chooser_add_filter ((GtkFileChooser*)dialog, filter);
-
   session_user (0x0F00);
 
   if (gtk_dialog_run ((GtkDialog*) dialog) == ((gint) GTK_RESPONSE_ACCEPT))
@@ -256,12 +169,104 @@ load_any_file (GtkWidget *object, gpointer parent)
   gtk_widget_destroy (dialog);
   session_user (0x0F00);
 
+  return filename;
+}
+
+
+static gchar*
+dialog_save_file (const gchar* title, const gchar* current_name)
+{
+  gchar* filename = NULL;
+  GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_SAVE;
+
+  GtkWidget *dialog = gtk_file_chooser_dialog_new (title,
+                                                   (GtkWindow*) mainwindow,
+                                                   action,
+                                                   "_Save",
+                                                   GTK_RESPONSE_ACCEPT,
+                                                   "_Cancel",
+                                                   GTK_RESPONSE_CANCEL,
+                                                   NULL);
+
+
+  gtk_file_chooser_set_do_overwrite_confirmation ((GtkFileChooser*) dialog, TRUE);
+  gtk_file_chooser_set_current_name ((GtkFileChooser*) dialog, current_name);
+
+  return dialog_run (dialog);
+}
+
+
+static gchar*
+dialog_load_file (const gchar* title,
+                  const gchar* pattern,
+                  const gchar* filter_name)
+{
+  GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_OPEN;
+
+  GtkWidget *dialog = gtk_file_chooser_dialog_new (title,
+                                                   (GtkWindow*) mainwindow,
+                                                   action,
+                                                   "_Open",
+                                                   GTK_RESPONSE_ACCEPT,
+                                                   "_Cancel",
+                                                   GTK_RESPONSE_CANCEL,
+                                                   NULL);
+
+  GtkFileFilter *filter = gtk_file_filter_new ();
+  gtk_file_filter_add_pattern (filter, pattern);
+  gtk_file_filter_set_name (filter, filter_name);
+
+  gtk_file_chooser_add_filter ((GtkFileChooser*) dialog, filter);
+
+  return dialog_run (dialog);
+}
+
+
+void
+snap_file (GtkWidget *object, gpointer parent)
+{
+  gchar* filename;
+  const gchar* mode = gtk_menu_item_get_label ((GtkMenuItem*) object);
+
+  if (mode[0] == 'S')
+  {
+    filename = dialog_save_file ("Save snapshot...", "Untitled.sna");
+  }
+  else
+  {
+    filename = dialog_load_file ("Load snapshot", "*.sna", "*.sna files");
+  }
+
   int e = 0;
-  if (filename)
+  if (filename != NULL)
+  {
+    if (mode[0] == 'S')
+      e = snap_save (filename);
+    else
+      e = snap_load (filename);
+
+    g_free (filename);
+  }
+
+  if (e != 0)
+    printf ("Error\n");
+}
+
+
+
+void
+load_any_file (GtkWidget *object, gpointer parent)
+{
+  gchar* filename = dialog_load_file ("Select any file...", "*", "All files");
+
+  int e = 0;
+  if (filename != NULL)
     e = any_load (filename, 1);
 
   if (e != 0)
     printf ("Error\n");
+
+  g_free (filename);
 }
 
 
@@ -332,7 +337,6 @@ gtk_create_window_new (void)
 {
   gtk_init (NULL, NULL);
 
-  GtkWidget *mainwindow;
   GtkWidget *blackbox;
   GtkWidget *drawing_area;
 
