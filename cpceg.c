@@ -40,6 +40,7 @@ static gchar* last_snap = NULL;
 int any_load (char *s, int q);
 int snap_load(char *s);
 int snap_save(char *s);
+void session_user(int k);
 
 
 static const unsigned char kbd_map_gdk[]=
@@ -191,6 +192,8 @@ snap_file (GtkWidget *object, gpointer parent)
 
   gtk_file_chooser_set_do_overwrite_confirmation ((GtkFileChooser*)dialog, TRUE);
 
+  session_user (0x0F00);
+
   if (gtk_dialog_run ((GtkDialog*) dialog) == ((gint) GTK_RESPONSE_ACCEPT))
   {
     gchar* filename = gtk_file_chooser_get_filename ((GtkFileChooser*) dialog);
@@ -215,6 +218,7 @@ snap_file (GtkWidget *object, gpointer parent)
   }
 
   gtk_widget_destroy (dialog);
+  session_user (0x0F00);
 }
 
 
@@ -244,10 +248,13 @@ load_any_file (GtkWidget *object, gpointer parent)
 
   gtk_file_chooser_add_filter ((GtkFileChooser*)dialog, filter);
 
+  session_user (0x0F00);
+
   if (gtk_dialog_run ((GtkDialog*) dialog) == ((gint) GTK_RESPONSE_ACCEPT))
     filename = gtk_file_chooser_get_filename ((GtkFileChooser*) dialog);
 
   gtk_widget_destroy (dialog);
+  session_user (0x0F00);
 
   int e = 0;
   if (filename)
@@ -268,8 +275,10 @@ gtk_quit (GtkWidget *object, gpointer data)
 void
 show_about (GtkWidget *object, gpointer window)
 {
+  session_user (0x0F00);
   gtk_dialog_run (GTK_DIALOG (window));
   gtk_widget_hide (window);
+  session_user (0x0F00);
 }
 
 
