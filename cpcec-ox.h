@@ -1289,7 +1289,7 @@ INLINE char *session_create(char *s) // create video+audio devices and set menu;
   SDL_GetVersion(&sdl_version); sprintf(session_version,"%d.%d.%d",sdl_version.major,sdl_version.minor,sdl_version.patch);
   if (SDL_Init(SDL_INIT_EVENTS|SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_TIMER|SDL_INIT_JOYSTICK|SDL_INIT_GAMECONTROLLER)<0)
     return (char*)SDL_GetError();
-  if (!(session_hwnd=SDL_CreateWindow(NULL,SDL_WINDOWPOS_UNDEFINED,SDL_WINDOWPOS_UNDEFINED,VIDEO_PIXELS_X,VIDEO_PIXELS_Y,SDL_WINDOW_HIDDEN))
+  if (!(session_hwnd=SDL_CreateWindow(NULL,SDL_WINDOWPOS_UNDEFINED,SDL_WINDOWPOS_UNDEFINED,VIDEO_PIXELS_X,VIDEO_PIXELS_Y,0))
     ||!(video_blend=malloc(sizeof(VIDEO_UNIT)*VIDEO_PIXELS_Y/2*VIDEO_PIXELS_X)))
     return SDL_Quit(),(char*)SDL_GetError();
   if (session_hardblit=1,session_softblit||!(session_blitter=SDL_CreateRenderer(session_hwnd,-1,SDL_RENDERER_ACCELERATED)))
@@ -1418,6 +1418,7 @@ INLINE char *session_create(char *s) // create video+audio devices and set menu;
 
   SDL_SetHint (SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
   gtk_create_window_new();
+  gtk_set_info1 (session_info);
   gtk_set_kbd ((unsigned char*)kbd_bit);
 
   return NULL;
@@ -1676,6 +1677,10 @@ INLINE void session_render(void) // update video, audio and timers
         performance_f*100.0/VIDEO_PLAYBACK,performance_b*100.0/VIDEO_PLAYBACK,
         session_hardblit?"SDL":"sdl",session_version);
       SDL_SetWindowTitle(session_hwnd,session_tmpstr);
+
+      gchar* perf = g_strdup_printf ("%g%% CPU", performance_f*100.0/VIDEO_PLAYBACK);
+      gtk_set_info3 (perf);
+      g_free (perf);
     }
     performance_t=i,performance_f=performance_b=session_paused=0;
   }

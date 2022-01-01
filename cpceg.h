@@ -32,6 +32,8 @@ void gtk_create_window_new (void);
 int gtk_loop (void);
 void gtk_update_cairo_surface (unsigned char* frame, int offset_x, int offset_y, int stride);
 void gtk_set_kbd (unsigned char* kdb_bit);
+void gtk_set_info1 (const char* info);
+void gtk_set_info3 (const char* perf);
 
 G_END_DECLS
 

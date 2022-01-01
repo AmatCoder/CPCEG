@@ -32,9 +32,15 @@ static unsigned char *kbd;
 
 static cairo_surface_t *surface = NULL;
 static gboolean quit = FALSE;
-//static GtkWidget *sbar1;
+static GtkWidget *sbar1;
+static GtkWidget *sbar3;
+static gchar* last_snap = NULL;
 
-int any_load (char *s, int q); // exported
+// exported
+int any_load (char *s, int q);
+int snap_load(char *s);
+int snap_save(char *s);
+
 
 static const unsigned char kbd_map_gdk[]=
 {
@@ -138,6 +144,82 @@ gtk_update_cairo_surface (unsigned char* frame,
 
 
 void
+snap_last (GtkWidget *object, gpointer parent)
+{
+  const gchar* mode = gtk_menu_item_get_label ((GtkMenuItem*) object);
+
+  if (last_snap != NULL)
+  {
+    if (mode[0] == 'S')
+      snap_save (last_snap);
+    else
+      snap_load (last_snap);
+  }
+}
+
+
+void
+snap_file (GtkWidget *object, gpointer parent)
+{
+  GtkWidget *dialog;
+  gchar* title;
+  gchar* button;
+  GtkFileChooserAction action;
+
+  const gchar* mode = gtk_menu_item_get_label ((GtkMenuItem*) object);
+  if (mode[0] == 'S')
+  {
+    action = GTK_FILE_CHOOSER_ACTION_SAVE;
+    title = "Save...";
+    button = "_Save";
+  }
+  else
+  {
+    action = GTK_FILE_CHOOSER_ACTION_OPEN;
+    title = "Open...";
+    button = "_Open";
+  }
+
+  dialog = gtk_file_chooser_dialog_new (title,
+                                        (GtkWindow*) parent,
+                                        action,
+                                        button,
+                                        GTK_RESPONSE_ACCEPT,
+                                        "_Cancel",
+                                        GTK_RESPONSE_CANCEL,
+                                        NULL);
+
+  gtk_file_chooser_set_do_overwrite_confirmation ((GtkFileChooser*)dialog, TRUE);
+
+  if (gtk_dialog_run ((GtkDialog*) dialog) == ((gint) GTK_RESPONSE_ACCEPT))
+  {
+    gchar* filename = gtk_file_chooser_get_filename ((GtkFileChooser*) dialog);
+
+    if (filename != NULL)
+    {
+      int e = 0;
+      if (mode[0] == 'S')
+        e = snap_save (filename);
+      else
+        e = snap_load (filename);
+
+      if (e == 0)
+      {
+        g_free (last_snap);
+        last_snap = g_strdup (filename);
+      }
+      else printf ("Error\n");
+
+      g_free (filename);
+    }
+  }
+
+  gtk_widget_destroy (dialog);
+}
+
+
+
+void
 load_any_file (GtkWidget *object, gpointer parent)
 {
   gchar* filename = NULL;
@@ -171,7 +253,7 @@ load_any_file (GtkWidget *object, gpointer parent)
   if (filename)
     e = any_load (filename, 1);
 
-  if (e)
+  if (e != 0)
     printf ("Error\n");
 }
 
@@ -186,9 +268,53 @@ gtk_quit (GtkWidget *object, gpointer data)
 void
 show_about (GtkWidget *object, gpointer window)
 {
-  int result = gtk_dialog_run (GTK_DIALOG (window));
-
+  gtk_dialog_run (GTK_DIALOG (window));
   gtk_widget_hide (window);
+}
+
+
+void gtk_set_info3 (const char* perf)
+{
+  gtk_label_set_text ((GtkLabel*)sbar3, perf);
+}
+
+
+void gtk_set_info1 (const char* info)
+{
+  gtk_label_set_text ((GtkLabel*)sbar1, info);
+
+  gchar** fields = g_strsplit_set (info,": ", 4);
+
+  gchar* manufacturer;
+  char c = fields[2][4];
+  switch (c)
+  {
+    case '0' :
+      manufacturer = "Hitachi";
+      break;
+    case '1' :
+      manufacturer = "UMC";
+      break;
+    case '2' :
+      manufacturer = "Motorola";
+      break;
+    case '3' :
+      manufacturer = "Amstrad ASIC";
+      break;
+    default :
+      manufacturer = "Amstrad";
+   }
+
+  gchar* tooltip = g_strdup_printf ("Actually used RAM space: %sK\n\
+RAM configuration: %s\n\
+CRTC type: %c - %s\n\
+Clock speed: %s", fields[0], fields[1], c, manufacturer, fields[3]);
+
+  g_strfreev (fields);
+
+  gtk_widget_set_tooltip_text (sbar1, tooltip);
+
+  g_free (tooltip);
 }
 
 
@@ -207,7 +333,8 @@ gtk_create_window_new (void)
   mainwindow = GTK_WIDGET (gtk_builder_get_object(builder, "main_window"));
   blackbox = GTK_WIDGET (gtk_builder_get_object(builder, "black_box"));
   drawing_area = GTK_WIDGET (gtk_builder_get_object(builder, "drawing"));
-  //sbar1 = GTK_WIDGET (gtk_builder_get_object(builder, "sbar_1"));
+  sbar1 = GTK_WIDGET (gtk_builder_get_object(builder, "sbar_1"));
+  sbar3 = GTK_WIDGET (gtk_builder_get_object(builder, "sbar_3"));
 
   gtk_builder_connect_signals (builder, NULL);
   g_object_unref(builder);
@@ -223,9 +350,10 @@ gtk_create_window_new (void)
   gtk_widget_show_all (mainwindow);
 
   while (gtk_events_pending())
+  {
     gtk_main_iteration();
-
-  gtk_widget_queue_draw (drawing_area);
+    gtk_widget_queue_draw (drawing_area);
+  }
 }
 
 
