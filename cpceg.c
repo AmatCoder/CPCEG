@@ -34,6 +34,10 @@ static cairo_surface_t *surface = NULL;
 static gboolean quit = FALSE;
 static GtkWidget *sbar1;
 static GtkWidget *sbar3;
+static GtkWidget *snap_menu;
+static GtkWidget *disca_menu;
+static GtkWidget *discb_menu;
+static GtkWidget *tape_menu;
 
 static unsigned char *kbd;
 
@@ -41,6 +45,9 @@ static unsigned char *kbd;
 int any_load (char *s, int q);
 int snap_load(char *s);
 int snap_save(char *s);
+int tape_open(char *s);
+int tape_create(char *s);
+
 void session_user(int k);
 
 
@@ -145,15 +152,50 @@ gtk_update_cairo_surface (unsigned char* frame,
 }
 
 
-void
-snap_last (GtkWidget *object, gpointer parent)
+static gboolean
+check_header (const gchar* content, const char* header)
 {
-  const gchar* mode = gtk_menu_item_get_label ((GtkMenuItem*) object);
+  guint i;
+  for (i = 0; i < 8; i++)
+  {
+    if (header[i] != content[i])
+    return FALSE;
+  }
 
-  if (mode[0] == 'S')
-    session_user (0x0300);
-  else
-    session_user (0x0300);
+  return TRUE;
+}
+
+
+static void
+check_menu (const gchar* filename)
+{
+  const char snap_header[8] = { 0x4D, 0x56, 0x20, 0x2D, 0x20, 0x53, 0x4E, 0x41 };
+  const char dsk_header[8] = { 0x45, 0x58, 0x54, 0x45, 0x4E, 0x44, 0x45, 0x44 };
+  const char tzx_header[8] = { 0x5A, 0x58, 0x54, 0x61, 0x70, 0x65, 0x21, 0x1A };
+
+  gchar *contents;
+  gsize length;
+  if (g_file_get_contents (filename, &contents, &length, NULL))
+  {
+    if (length > 8)
+    {
+      GtkMenuItem* menu = NULL;
+      if (check_header (contents, snap_header))
+        menu = ((GtkMenuItem*) snap_menu);
+      else if (check_header (contents, dsk_header))
+        menu = ((GtkMenuItem*) disca_menu);  //only on A?
+      else if (check_header (contents, tzx_header))
+        menu = ((GtkMenuItem*) tape_menu);
+
+      if (menu != NULL)
+      {
+        gchar* basename = g_path_get_basename (filename);
+        gtk_menu_item_set_label (menu, basename);
+        g_free (basename);
+      }
+    }
+  }
+  g_free (contents);
 }
 
 
@@ -198,7 +240,7 @@ dialog_save_file (const gchar* title, const gchar* current_name)
 
 static gchar*
 dialog_load_file (const gchar* title,
-                  const gchar* pattern,
+                  gchar** patterns,
                   const gchar* filter_name)
 {
   GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_OPEN;
@@ -213,17 +255,70 @@ dialog_load_file (const gchar* title,
                                                    NULL);
 
   GtkFileFilter *filter = gtk_file_filter_new ();
-  gtk_file_filter_add_pattern (filter, pattern);
-  gtk_file_filter_set_name (filter, filter_name);
 
+  guint i = 0;
+  while (patterns[i] != NULL)
+  {
+    gtk_file_filter_add_pattern (filter, patterns[i]);
+    i++;
+  }
+
+  gtk_file_filter_set_name (filter, filter_name);
   gtk_file_chooser_add_filter ((GtkFileChooser*) dialog, filter);
+
+  GtkFileFilter *filter2 = gtk_file_filter_new ();
+  gtk_file_filter_add_pattern (filter2, "*");
+
+  gtk_file_filter_set_name (filter2, "All files (*.*)");
+  gtk_file_chooser_add_filter ((GtkFileChooser*) dialog, filter2);
 
   return dialog_run (dialog);
 }
 
 
 void
-snap_file (GtkWidget *object, gpointer parent)
+tape_remove (GtkWidget *object, gpointer data)
+{
+  session_user (0x0800);
+  gtk_menu_item_set_label ((GtkMenuItem*) tape_menu, "Empty");
+}
+
+
+void
+tape_insert (GtkWidget *object, gpointer data)
+{
+  gchar* patterns[] = {"*.cdt", "*.tzx", "*.csw", "*.wav", NULL};
+  gchar* filename = dialog_load_file ("Select a tape...", patterns, "Tape files (*.cdt, *.tzx, *.csw, *.wav)");
+
+  if (filename != NULL)
+  {
+    if (tape_open (filename))
+      printf ("Cannot open tape!\n");
+    else
+    {
+      gchar* basename = g_path_get_basename (filename);
+      gtk_menu_item_set_label ((GtkMenuItem*) tape_menu, basename);
+      g_free (basename);
+    }
+    g_free (filename);
+  }
+}
+
+
+void
+snap_last (GtkWidget *object, gpointer data)
+{
+  const gchar* mode = gtk_menu_item_get_label ((GtkMenuItem*) object);
+
+  if (mode[0] == 'S')
+    session_user (0x0300);
+  else
+    session_user (0x0300);
+}
+
+
+void
+snap_file (GtkWidget *object, gpointer data)
 {
   gchar* filename;
   const gchar* mode = gtk_menu_item_get_label ((GtkMenuItem*) object);
@@ -234,30 +329,37 @@ snap_file (GtkWidget *object, gpointer parent)
   }
   else
   {
-    filename = dialog_load_file ("Load snapshot", "*.sna", "*.sna files");
+    gchar* patterns[] = {"*.sna", NULL};
+    filename = dialog_load_file ("Load snapshot", patterns, "Snapshot files (*.sna)");
   }
 
-  int e = 0;
   if (filename != NULL)
   {
+    int e = 0;
     if (mode[0] == 'S')
       e = snap_save (filename);
     else
       e = snap_load (filename);
 
+    if (e != 0)
+      printf ("Error\n");
+    else
+    {
+      gchar* basename = g_path_get_basename (filename);
+      gtk_menu_item_set_label ((GtkMenuItem*) snap_menu, basename);
+      g_free (basename);
+    }
+
     g_free (filename);
   }
-
-  if (e != 0)
-    printf ("Error\n");
 }
 
 
-
 void
-load_any_file (GtkWidget *object, gpointer parent)
+load_any_file (GtkWidget *object, gpointer data)
 {
-  gchar* filename = dialog_load_file ("Select any file...", "*", "All files");
+  gchar* patterns[] = {"*.sna", "*.dsk", "*.cpr", "*.rom", "*.cdt", "*.tzx", "*.csw", "*.wav", NULL};
+  gchar* filename = dialog_load_file ("Select any file...", patterns, "CPC files (*.sna, *.dsk, *.cpr, *.rom, *.cdt, *.tzx, *.csw, *.wav)");
 
   int e = 0;
   if (filename != NULL)
@@ -265,6 +367,8 @@ load_any_file (GtkWidget *object, gpointer parent)
 
   if (e != 0)
     printf ("Error\n");
+  else
+    check_menu (filename);
 
   g_free (filename);
 }
@@ -348,6 +452,11 @@ gtk_create_window_new (void)
   drawing_area = GTK_WIDGET (gtk_builder_get_object(builder, "drawing"));
   sbar1 = GTK_WIDGET (gtk_builder_get_object(builder, "sbar_1"));
   sbar3 = GTK_WIDGET (gtk_builder_get_object(builder, "sbar_3"));
+
+  snap_menu = GTK_WIDGET (gtk_builder_get_object(builder, "snap_menu"));
+  disca_menu = GTK_WIDGET (gtk_builder_get_object(builder, "disca_menu"));
+  discb_menu = GTK_WIDGET (gtk_builder_get_object(builder, "discb_menu"));
+  tape_menu = GTK_WIDGET (gtk_builder_get_object(builder, "tape_menu"));
 
   gtk_builder_connect_signals (builder, NULL);
   g_object_unref(builder);
