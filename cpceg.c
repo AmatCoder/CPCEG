@@ -172,6 +172,7 @@ check_menu (const gchar* filename)
   const char snap_header[8] = { 0x4D, 0x56, 0x20, 0x2D, 0x20, 0x53, 0x4E, 0x41 };
   const char dsk_header[8] = { 0x45, 0x58, 0x54, 0x45, 0x4E, 0x44, 0x45, 0x44 };
   const char tzx_header[8] = { 0x5A, 0x58, 0x54, 0x61, 0x70, 0x65, 0x21, 0x1A };
+  const char csw_header[8] = { 0x43, 0x6F, 0x6D, 0x70, 0x72, 0x65, 0x73, 0x73 }; // TODO: wav files
 
   gchar *contents;
   gsize length;
@@ -184,11 +185,15 @@ check_menu (const gchar* filename)
         menu = ((GtkMenuItem*) snap_menu);
       else if (check_header (contents, dsk_header))
         menu = ((GtkMenuItem*) disca_menu);  //only on A?
-      else if (check_header (contents, tzx_header))
+      else if ( (check_header (contents, tzx_header)) || (check_header (contents, csw_header)) )
         menu = ((GtkMenuItem*) tape_menu);
 
       if (menu != NULL)
       {
+        gtk_menu_item_set_label ((GtkMenuItem*) tape_menu, "Empty");
+        gtk_menu_item_set_label ((GtkMenuItem*) disca_menu, "Empty");
+        gtk_menu_item_set_label ((GtkMenuItem*) discb_menu, "Empty");
+
         gchar* basename = g_path_get_basename (filename);
         gtk_menu_item_set_label (menu, basename);
         g_free (basename);
@@ -281,6 +286,25 @@ tape_remove (GtkWidget *object, gpointer data)
 {
   session_user (0x0800);
   gtk_menu_item_set_label ((GtkMenuItem*) tape_menu, "Empty");
+}
+
+
+void
+tape_record_menu (GtkWidget *object, gpointer data)
+{
+  gchar* filename = dialog_save_file ("New tape...", "Untitled.csw");
+  if (filename != NULL)
+  {
+    if (tape_create (filename))
+      printf ("Cannot save tape!\n");
+    else
+    {
+      gchar* basename = g_path_get_basename (filename);
+      gtk_menu_item_set_label ((GtkMenuItem*) tape_menu, basename);
+      g_free (basename);
+    }
+    g_free (filename);
+  }
 }
 
 

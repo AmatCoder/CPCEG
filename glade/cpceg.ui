@@ -345,12 +345,14 @@ AmatCoder (GUI)</property>
                                 <property name="can_focus">False</property>
                                 <property name="label" translatable="yes">Record...</property>
                                 <property name="use_underline">True</property>
+                                <signal name="activate" handler="tape_record_menu" swapped="no"/>
                                 <accelerator key="F8" signal="activate" modifiers="GDK_SHIFT_MASK"/>
                               </object>
                             </child>
                             <child>
                               <object class="GtkMenuItem">
                                 <property name="visible">True</property>
+                                <property name="sensitive">False</property>
                                 <property name="can_focus">False</property>
                                 <property name="label" translatable="yes">Browse...</property>
                                 <property name="use_underline">True</property>
