@@ -45,6 +45,10 @@ static unsigned char *kbd;
 int any_load (char *s, int q);
 int snap_load(char *s);
 int snap_save(char *s);
+int disc_open(char *s,int drive,int canwrite);
+int disc_create(char *s);
+void disc_flip_sides(int drive);
+void disc_close(int drive);
 int tape_open(char *s);
 int tape_create(char *s);
 
@@ -159,7 +163,7 @@ check_header (const gchar* content, const char* header)
   for (i = 0; i < 8; i++)
   {
     if (header[i] != content[i])
-    return FALSE;
+      return FALSE;
   }
 
   return TRUE;
@@ -281,6 +285,78 @@ dialog_load_file (const gchar* title,
 }
 
 
+static int
+get_disc_drive (gpointer item)
+{
+  const gchar *label = gtk_menu_item_get_label((GtkMenuItem*) item);
+
+  return (label[5] == 'A') ? 0 : 1;
+}
+
+
+void
+disca_insert (GtkWidget *object, gpointer data)
+{
+  gchar* patterns[] = {"*.dsk", NULL};
+  gchar* filename = dialog_load_file ("Select a disc...", patterns, "Disc files (*.dsk)");
+
+  if (filename != NULL)
+  {
+    int d = get_disc_drive (data);
+    if (disc_open (filename, d, 0))
+      printf ("Cannot open disc!\n");
+    else
+    {
+      gchar* basename = g_path_get_basename (filename);
+      gtk_menu_item_set_label ((d == 0) ? (GtkMenuItem*) disca_menu : (GtkMenuItem*) discb_menu, basename);
+      g_free (basename);
+    }
+    g_free (filename);
+  }
+}
+
+
+void
+disca_create (GtkWidget *object, gpointer data)
+{
+  gchar* filename = dialog_save_file ("New disc...", "Untitled.dsk");
+
+  if (filename != NULL)
+  {
+    if (disc_create (filename))
+      printf ("Cannot save disc!\n");
+    else
+    {
+      int d = get_disc_drive (data);
+      disc_open (filename, d, 1);
+
+      gchar* basename = g_path_get_basename (filename);
+      gtk_menu_item_set_label ((d == 0) ? (GtkMenuItem*) disca_menu : (GtkMenuItem*) discb_menu, basename);
+      g_free (basename);
+    }
+    g_free (filename);
+  }
+}
+
+
+void
+disca_flip (GtkCheckMenuItem* self, gpointer data)
+{
+  int d = get_disc_drive (data);
+  disc_flip_sides (d);
+}
+
+
+void
+disca_remove (GtkWidget *object, gpointer data)
+{
+  int d = get_disc_drive (data);
+  disc_close (d);
+
+  gtk_menu_item_set_label ((d == 0) ? (GtkMenuItem*) disca_menu : (GtkMenuItem*) discb_menu, "Empty");
+}
+
+
 void
 tape_remove (GtkWidget *object, gpointer data)
 {
@@ -334,10 +410,7 @@ snap_last (GtkWidget *object, gpointer data)
 {
   const gchar* mode = gtk_menu_item_get_label ((GtkMenuItem*) object);
 
-  if (mode[0] == 'S')
-    session_user (0x0300);
-  else
-    session_user (0x0300);
+  (mode[0] == 'S') ? session_user (0x0200) : session_user (0x0300);
 }
 
 

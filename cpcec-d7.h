@@ -50,6 +50,11 @@ int disc_filemode=1; // +1 = read-only by default instead of read-write; +2 = re
 
 char disc_path[STRMAX]="";
 
+void disc_flip_sides(int drive)
+{
+	disc_flip[drive]^=1;
+}
+
 void disc_track_reset(int drive) // invalidate drive `d` tracks on both sides
 {
 	MEMZERO(disc_track_table[drive]); MEMZERO(disc_track_table[drive+4]);
