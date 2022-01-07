@@ -175,8 +175,9 @@ check_menu (const gchar* filename)
 {
   const char snap_header[8] = { 0x4D, 0x56, 0x20, 0x2D, 0x20, 0x53, 0x4E, 0x41 };
   const char dsk_header[8] = { 0x45, 0x58, 0x54, 0x45, 0x4E, 0x44, 0x45, 0x44 };
+  const char mvc_header[8] = { 0x4D, 0x56, 0x20, 0x2D, 0x20, 0x43, 0x50, 0x43 };
   const char tzx_header[8] = { 0x5A, 0x58, 0x54, 0x61, 0x70, 0x65, 0x21, 0x1A };
-  const char csw_header[8] = { 0x43, 0x6F, 0x6D, 0x70, 0x72, 0x65, 0x73, 0x73 }; // TODO: wav files
+  const char csw_header[8] = { 0x43, 0x6F, 0x6D, 0x70, 0x72, 0x65, 0x73, 0x73 }; // TODO: wav & cpr files
 
   gchar *contents;
   gsize length;
@@ -187,7 +188,7 @@ check_menu (const gchar* filename)
       GtkMenuItem* menu = NULL;
       if (check_header (contents, snap_header))
         menu = ((GtkMenuItem*) snap_menu);
-      else if (check_header (contents, dsk_header))
+      else if ((check_header (contents, dsk_header)) || (check_header (contents, mvc_header)))
         menu = ((GtkMenuItem*) disca_menu);  //only on A?
       else if ( (check_header (contents, tzx_header)) || (check_header (contents, csw_header)) )
         menu = ((GtkMenuItem*) tape_menu);
@@ -452,12 +453,9 @@ snap_file (GtkWidget *object, gpointer data)
 }
 
 
-void
-load_any_file (GtkWidget *object, gpointer data)
+static void
+load_any_file (gchar* filename)
 {
-  gchar* patterns[] = {"*.sna", "*.dsk", "*.cpr", "*.rom", "*.cdt", "*.tzx", "*.csw", "*.wav", NULL};
-  gchar* filename = dialog_load_file ("Select any file...", patterns, "CPC files (*.sna, *.dsk, *.cpr, *.rom, *.cdt, *.tzx, *.csw, *.wav)");
-
   int e = 0;
   if (filename != NULL)
     e = any_load (filename, 1);
@@ -466,8 +464,52 @@ load_any_file (GtkWidget *object, gpointer data)
     printf ("Error\n");
   else
     check_menu (filename);
+}
+
+
+void
+load_any_menu (GtkWidget *object, gpointer data)
+{
+  gchar* patterns[] = {"*.sna", "*.dsk", "*.cpr", "*.rom", "*.cdt", "*.tzx", "*.csw", "*.wav", NULL};
+  gchar* filename = dialog_load_file ("Select any file...", patterns, "CPC files (*.sna, *.dsk, *.cpr, *.rom, *.cdt, *.tzx, *.csw, *.wav)");
+  load_any_file (filename);
+  g_free (filename);
+}
+
+
+void
+drag_data (GtkWidget *self,
+           GdkDragContext *context,
+           gint x,
+           gint y,
+           GtkSelectionData *seldata,
+           guint info,
+           guint time,
+           gpointer data)
+{
+  gchar **uris = g_uri_list_extract_uris (gtk_selection_data_get_data (seldata));
+
+  if (uris == NULL)
+  {
+    gtk_drag_finish (context, FALSE, FALSE, time);
+    return;
+  }
+
+  gchar* filename = g_filename_from_uri (uris[0], NULL, NULL);
+
+  if (filename != NULL)
+    load_any_file (filename);
+  else
+  {
+    g_strfreev (uris);
+    gtk_drag_finish (context, FALSE, FALSE, time);
+    return;
+  }
 
   g_free (filename);
+  g_strfreev (uris);
+
+  gtk_drag_finish (context, TRUE, FALSE, time);
 }
 
 
@@ -536,10 +578,11 @@ Clock speed: %s", fields[0], fields[1], c, manufacturer, fields[3]);
 void
 gtk_create_window_new (void)
 {
-  gtk_init (NULL, NULL);
-
   GtkWidget *blackbox;
   GtkWidget *drawing_area;
+  GtkTargetEntry targetentries[] = {"text/uri-list", 0, 0};
+
+  gtk_init (NULL, NULL);
 
   GtkBuilder* builder = gtk_builder_new();
   gtk_builder_add_from_file (builder, "./glade/cpceg.ui", NULL);
@@ -565,6 +608,8 @@ gtk_create_window_new (void)
   GtkStyleContext *context = gtk_widget_get_style_context (blackbox);
   gtk_style_context_add_provider (context, GTK_STYLE_PROVIDER(css), GTK_STYLE_PROVIDER_PRIORITY_USER);
   g_object_unref (css);
+
+  gtk_drag_dest_set (mainwindow, GTK_DEST_DEFAULT_DROP, targetentries, 1, GDK_ACTION_LINK);
 
   gtk_widget_show_all (mainwindow);
 
