@@ -602,8 +602,11 @@ void
 show_about (GtkWidget *object, gpointer window)
 {
   session_user (0x0F00);
+
+  gtk_about_dialog_set_logo ((GtkAboutDialog*) window, NULL);
   gtk_dialog_run (GTK_DIALOG (window));
   gtk_widget_hide (window);
+
   session_user (0x0F00);
 }
 
@@ -680,6 +683,8 @@ gtk_create_window_new (void)
   g_object_unref(builder);
 
   gtk_widget_set_size_request (drawing_area, NATIVE_RES_X, NATIVE_RES_Y);
+
+  gtk_window_set_default_icon (gdk_pixbuf_new_from_resource ("/com/github/AmatCoder/CPCEG/cpcec.png", NULL));
 
   GtkCssProvider *css = gtk_css_provider_new();
   gtk_css_provider_load_from_data(css, "* {background-color:black;}", -1, NULL);
