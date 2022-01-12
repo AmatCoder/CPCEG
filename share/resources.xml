@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/com/github/AmatCoder/CPCEG">
+    <file compressed="true">cpcec.png</file>
+    <file compressed="true">cpc464.rom</file>
+    <file compressed="true">cpc664.rom</file>
+    <file compressed="true">cpc6128.rom</file>
+    <file compressed="true">cpcplus.rom</file>
+    <file compressed="true">cpcados.rom</file>
+  </gresource>
+</gresources>

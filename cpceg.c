@@ -22,6 +22,7 @@
  */
 
 #include "cpceg.h"
+#include "resources.h"
 
 #define NATIVE_RES_X 384
 #define NATIVE_RES_Y 268
@@ -38,6 +39,7 @@ static GtkWidget *snap_menu;
 static GtkWidget *disca_menu;
 static GtkWidget *discb_menu;
 static GtkWidget *tape_menu;
+static gchar* conf_path = NULL;
 
 static unsigned char *kbd;
 
@@ -51,6 +53,8 @@ void disc_flip_sides(int drive);
 void disc_close(int drive);
 int tape_open(char *s);
 int tape_create(char *s);
+int bios_load(char *s);
+void all_reset(void);
 
 void session_user(int k);
 
@@ -153,6 +157,77 @@ gtk_update_cairo_surface (unsigned char* frame,
     data = frame;
     cairo_surface_mark_dirty (surface);
   }
+}
+
+
+void
+model_changed (GtkCheckMenuItem* self, gpointer user_data)
+{
+  if (!gtk_check_menu_item_get_active(self))
+    return;
+
+  const gchar *label = gtk_menu_item_get_label((GtkMenuItem*) self);
+
+  gchar* rom = NULL;
+  if (g_strcmp0(label, "464") == 0)
+    rom = "cpc464.rom";
+  else if (g_strcmp0(label, "664") == 0)
+    rom = "cpc664.rom";
+  else if (g_strcmp0(label, "6128") == 0)
+    rom = "cpc6128.rom";
+  else if (g_strcmp0(label, "6128plus") == 0)
+    rom = "cpcplus.rom";
+  else if (g_strcmp0(label, "cpcados") == 0)
+    rom = "cpcados.rom";
+
+  if (rom != NULL)
+  {
+    gchar* rom_path = g_strconcat (conf_path, rom, NULL);
+    bios_load (rom_path);
+    all_reset();
+  }
+}
+
+
+void
+gtk_session_init (char* session_path)
+{
+  conf_path = g_strconcat (g_get_user_config_dir(), G_DIR_SEPARATOR_S, "cpceg", G_DIR_SEPARATOR_S, NULL);
+
+  if (!g_file_test (conf_path, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR))
+  {
+    if (g_mkdir_with_parents (conf_path, 0700) == -1)
+    {
+      printf("Error!\n");
+      return;
+    }
+  }
+
+  gchar* models[] = {"cpc464.rom", "cpc664.rom", "cpc6128.rom", "cpcplus.rom", "cpcados.rom", NULL};
+  int i = 0;
+  while (models[i] != NULL)
+  {
+    gchar* rom = g_strconcat (conf_path, models[i], NULL);
+    if (!g_file_test (rom, G_FILE_TEST_EXISTS))
+    {
+      GResource* r = resources_get_resource();
+      gchar* romres = g_strconcat ("/com/github/AmatCoder/CPCEG/", models[i], NULL);
+      GInputStream* is = g_resource_open_stream (r, romres, G_RESOURCE_LOOKUP_FLAGS_NONE, NULL);
+      gsize size;
+      g_resource_get_info (r, romres, G_RESOURCE_LOOKUP_FLAGS_NONE, &size, NULL, NULL);
+      void* buffer = g_malloc (size);
+      g_input_stream_read (is, buffer, size, NULL, NULL);
+      g_file_set_contents (rom, (const gchar*) buffer, size, NULL);
+
+      g_free (buffer);
+      g_object_unref (is);
+      g_free (romres);
+    }
+    i++;
+    g_free (rom);
+  }
+
+  g_strlcpy (session_path, conf_path, PATH_MAX);
 }
 
 
@@ -472,8 +547,11 @@ load_any_menu (GtkWidget *object, gpointer data)
 {
   gchar* patterns[] = {"*.sna", "*.dsk", "*.cpr", "*.rom", "*.cdt", "*.tzx", "*.csw", "*.wav", NULL};
   gchar* filename = dialog_load_file ("Select any file...", patterns, "CPC files (*.sna, *.dsk, *.cpr, *.rom, *.cdt, *.tzx, *.csw, *.wav)");
-  load_any_file (filename);
-  g_free (filename);
+  if (filename != NULL)
+  {
+    load_any_file (filename);
+    g_free (filename);
+  }
 }
 
 
@@ -585,7 +663,7 @@ gtk_create_window_new (void)
   gtk_init (NULL, NULL);
 
   GtkBuilder* builder = gtk_builder_new();
-  gtk_builder_add_from_file (builder, "./glade/cpceg.ui", NULL);
+  gtk_builder_add_from_file (builder, "./share/glade/cpceg.ui", NULL);
 
   mainwindow = GTK_WIDGET (gtk_builder_get_object(builder, "main_window"));
   blackbox = GTK_WIDGET (gtk_builder_get_object(builder, "black_box"));
