@@ -34,6 +34,7 @@ void gtk_update_cairo_surface (unsigned char* frame, int offset_x, int offset_y,
 void gtk_set_kbd (unsigned char* kdb_bit);
 void gtk_set_info1 (const char* info);
 void gtk_set_info3 (const char* perf);
+void gtk_session_init (char* session_path);
 
 G_END_DECLS
 

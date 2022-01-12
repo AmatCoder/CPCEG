@@ -1407,6 +1407,8 @@ void session_detectpath(char *s) // detects session path using argv[0] as refere
 		s[1]=0; // keep separator
 	else
 		*session_path=0; // no path (?)
+
+	gtk_session_init (session_path);
 }
 FILE *session_configfile(int q) // returns handle to configuration file, `q`?read:write
 {
