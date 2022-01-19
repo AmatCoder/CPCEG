@@ -27,51 +27,6 @@ Author: AmatCoder
   <!-- interface-name CPCEG -->
   <!-- interface-copyright 2021 AmatCoder -->
   <!-- interface-authors AmatCoder -->
-  <object class="GtkAboutDialog" id="about_window">
-    <property name="can_focus">False</property>
-    <property name="modal">True</property>
-    <property name="destroy_with_parent">True</property>
-    <property name="type_hint">dialog</property>
-    <property name="skip_taskbar_hint">True</property>
-    <property name="skip_pager_hint">True</property>
-    <property name="program_name">CPCEG</property>
-    <property name="version">0.1</property>
-    <property name="copyright" translatable="yes">2018-2021 © Cesar Nicolas-Gonzalez
-2021 © AmatCoder
-
-Amstrad have kindly given their permission for the redistribution of their copyrighted material but retain that copyright.
-</property>
-    <property name="comments" translatable="yes">An emulator of the family of home microcomputers Amstrad CPC</property>
-    <property name="website">https://github.com/AmatCoder/CPCEG</property>
-    <property name="authors">Cesar Nicolas-Gonzalez (Emulation)
-AmatCoder (GUI)</property>
-    <property name="logo_icon_name">image-missing</property>
-    <property name="license_type">gpl-3-0</property>
-    <child internal-child="vbox">
-      <object class="GtkBox">
-        <property name="can_focus">False</property>
-        <property name="orientation">vertical</property>
-        <property name="spacing">2</property>
-        <child internal-child="action_area">
-          <object class="GtkButtonBox">
-            <property name="can_focus">False</property>
-            <property name="layout_style">end</property>
-          </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="fill">False</property>
-            <property name="position">0</property>
-          </packing>
-        </child>
-        <child>
-          <placeholder/>
-        </child>
-      </object>
-    </child>
-    <child type="titlebar">
-      <placeholder/>
-    </child>
-  </object>
   <object class="GtkWindow" id="main_window">
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">CPCEG</property>
@@ -105,7 +60,7 @@ AmatCoder (GUI)</property>
                         <property name="can_focus">False</property>
                         <property name="label" translatable="yes">Open any file...</property>
                         <property name="use_underline">True</property>
-                        <signal name="activate" handler="load_any_menu" swapped="no"/>
+                        <signal name="activate" handler="open_any_file" swapped="no"/>
                         <accelerator key="o" signal="activate" modifiers="GDK_CONTROL_MASK"/>
                       </object>
                     </child>
@@ -126,7 +81,7 @@ AmatCoder (GUI)</property>
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <child>
-                              <object class="GtkMenuItem" id="snap_menu">
+                              <object class="GtkMenuItem" id="snap">
                                 <property name="visible">True</property>
                                 <property name="sensitive">False</property>
                                 <property name="can_focus">False</property>
@@ -185,7 +140,7 @@ AmatCoder (GUI)</property>
                       </object>
                     </child>
                     <child>
-                      <object class="GtkMenuItem" id="disca">
+                      <object class="GtkMenuItem">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="label" translatable="yes">Disc A:</property>
@@ -195,7 +150,8 @@ AmatCoder (GUI)</property>
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <child>
-                              <object class="GtkMenuItem" id="disca_menu">
+                              <object class="GtkMenuItem" id="disc">
+                                <property name="name">A</property>
                                 <property name="visible">True</property>
                                 <property name="sensitive">False</property>
                                 <property name="can_focus">False</property>
@@ -215,7 +171,7 @@ AmatCoder (GUI)</property>
                                 <property name="can_focus">False</property>
                                 <property name="label" translatable="yes">Insert...</property>
                                 <property name="use_underline">True</property>
-                                <signal name="activate" handler="disca_insert" object="disca" swapped="no"/>
+                                <signal name="activate" handler="disc_insert" object="disc" swapped="no"/>
                                 <accelerator key="F7" signal="activate"/>
                               </object>
                             </child>
@@ -225,7 +181,7 @@ AmatCoder (GUI)</property>
                                 <property name="can_focus">False</property>
                                 <property name="label" translatable="yes">Create...</property>
                                 <property name="use_underline">True</property>
-                                <signal name="activate" handler="disca_create" object="disca" swapped="no"/>
+                                <signal name="activate" handler="disc_create0" object="disc" swapped="no"/>
                               </object>
                             </child>
                             <child>
@@ -234,7 +190,7 @@ AmatCoder (GUI)</property>
                                 <property name="can_focus">False</property>
                                 <property name="label" translatable="yes">Flip sides</property>
                                 <property name="use_underline">True</property>
-                                <signal name="toggled" handler="disca_flip" object="disca" swapped="no"/>
+                                <signal name="toggled" handler="disc_flip0" object="disc" swapped="no"/>
                               </object>
                             </child>
                             <child>
@@ -243,7 +199,7 @@ AmatCoder (GUI)</property>
                                 <property name="can_focus">False</property>
                                 <property name="label" translatable="yes">Remove</property>
                                 <property name="use_underline">True</property>
-                                <signal name="activate" handler="disca_remove" object="disca" swapped="no"/>
+                                <signal name="activate" handler="disc_remove" object="disc" swapped="no"/>
                                 <accelerator key="F7" signal="activate" modifiers="GDK_CONTROL_MASK"/>
                               </object>
                             </child>
@@ -252,7 +208,7 @@ AmatCoder (GUI)</property>
                       </object>
                     </child>
                     <child>
-                      <object class="GtkMenuItem" id="discb">
+                      <object class="GtkMenuItem">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="label" translatable="yes">Disc B:</property>
@@ -262,7 +218,7 @@ AmatCoder (GUI)</property>
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <child>
-                              <object class="GtkMenuItem" id="discb_menu">
+                              <object class="GtkMenuItem" id="discb">
                                 <property name="visible">True</property>
                                 <property name="sensitive">False</property>
                                 <property name="can_focus">False</property>
@@ -282,7 +238,7 @@ AmatCoder (GUI)</property>
                                 <property name="can_focus">False</property>
                                 <property name="label" translatable="yes">Insert...</property>
                                 <property name="use_underline">True</property>
-                                <signal name="activate" handler="disca_insert" object="discb" swapped="no"/>
+                                <signal name="activate" handler="disc_insert" object="discb" swapped="no"/>
                                 <accelerator key="F7" signal="activate" modifiers="GDK_SHIFT_MASK"/>
                               </object>
                             </child>
@@ -292,7 +248,7 @@ AmatCoder (GUI)</property>
                                 <property name="can_focus">False</property>
                                 <property name="label" translatable="yes">Create...</property>
                                 <property name="use_underline">True</property>
-                                <signal name="activate" handler="disca_create" object="discb" swapped="no"/>
+                                <signal name="activate" handler="disc_create0" object="discb" swapped="no"/>
                               </object>
                             </child>
                             <child>
@@ -301,7 +257,7 @@ AmatCoder (GUI)</property>
                                 <property name="can_focus">False</property>
                                 <property name="label" translatable="yes">Flip sides</property>
                                 <property name="use_underline">True</property>
-                                <signal name="toggled" handler="disca_flip" object="discb" swapped="no"/>
+                                <signal name="toggled" handler="disc_flip0" object="discb" swapped="no"/>
                               </object>
                             </child>
                             <child>
@@ -310,7 +266,7 @@ AmatCoder (GUI)</property>
                                 <property name="can_focus">False</property>
                                 <property name="label" translatable="yes">Remove</property>
                                 <property name="use_underline">True</property>
-                                <signal name="activate" handler="disca_remove" object="discb" swapped="no"/>
+                                <signal name="activate" handler="disc_remove" object="discb" swapped="no"/>
                                 <accelerator key="F7" signal="activate" modifiers="GDK_SHIFT_MASK | GDK_CONTROL_MASK"/>
                               </object>
                             </child>
@@ -358,7 +314,7 @@ AmatCoder (GUI)</property>
                                 <property name="can_focus">False</property>
                                 <property name="label" translatable="yes">Record...</property>
                                 <property name="use_underline">True</property>
-                                <signal name="activate" handler="tape_record_menu" swapped="no"/>
+                                <signal name="activate" handler="tape_record0" swapped="no"/>
                                 <accelerator key="F8" signal="activate" modifiers="GDK_SHIFT_MASK"/>
                               </object>
                             </child>
@@ -419,55 +375,389 @@ AmatCoder (GUI)</property>
                       <object class="GtkMenuItem">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">Select model</property>
+                        <property name="label" translatable="yes">Model</property>
                         <property name="use_underline">True</property>
                         <child type="submenu">
                           <object class="GtkMenu">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <child>
-                              <object class="GtkRadioMenuItem" id="radiomenuitem1">
+                              <object class="GtkRadioMenuItem" id="type 0">
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
                                 <property name="label" translatable="yes">464</property>
                                 <property name="use_underline">True</property>
-                                <property name="active">True</property>
                                 <property name="draw_as_radio">True</property>
                                 <signal name="toggled" handler="model_changed" swapped="no"/>
                               </object>
                             </child>
                             <child>
-                              <object class="GtkRadioMenuItem">
+                              <object class="GtkRadioMenuItem" id="type 1">
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
                                 <property name="label" translatable="yes">664</property>
                                 <property name="use_underline">True</property>
                                 <property name="draw_as_radio">True</property>
-                                <property name="group">radiomenuitem1</property>
+                                <property name="group">type 0</property>
                                 <signal name="toggled" handler="model_changed" swapped="no"/>
                               </object>
                             </child>
                             <child>
-                              <object class="GtkRadioMenuItem">
+                              <object class="GtkRadioMenuItem" id="type 2">
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
                                 <property name="label" translatable="yes">6128</property>
                                 <property name="use_underline">True</property>
+                                <property name="draw_as_radio">True</property>
+                                <property name="group">type 0</property>
+                                <signal name="toggled" handler="model_changed" swapped="no"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkRadioMenuItem" id="type 3">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="label" translatable="yes">Plus</property>
+                                <property name="use_underline">True</property>
+                                <property name="draw_as_radio">True</property>
+                                <property name="group">type 0</property>
+                                <signal name="toggled" handler="model_changed" swapped="no"/>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkMenuItem">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Select firmware...</property>
+                        <property name="use_underline">True</property>
+                        <signal name="activate" handler="select_firmware" swapped="no"/>
+                        <accelerator key="F5" signal="activate"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkSeparatorMenuItem">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkMenuItem">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Reset emulation</property>
+                        <property name="use_underline">True</property>
+                        <signal name="activate" handler="reset_emulation" swapped="no"/>
+                        <accelerator key="F5" signal="activate" modifiers="GDK_CONTROL_MASK"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkCheckMenuItem">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Pause</property>
+                        <property name="use_underline">True</property>
+                        <signal name="toggled" handler="pause_machine" swapped="no"/>
+                        <accelerator key="Pause" signal="activate"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkMenuItem">
+                        <property name="visible">True</property>
+                        <property name="sensitive">False</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Debug</property>
+                        <property name="use_underline">True</property>
+                        <accelerator key="F9" signal="activate"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkSeparatorMenuItem">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkMenuItem">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">RAM</property>
+                        <property name="use_underline">True</property>
+                        <child type="submenu">
+                          <object class="GtkMenu">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <child>
+                              <object class="GtkRadioMenuItem" id="bank 0">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="label" translatable="yes">64k</property>
+                                <property name="use_underline">True</property>
+                                <property name="draw_as_radio">True</property>
+                                <signal name="toggled" handler="ram_changed" swapped="no"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkRadioMenuItem" id="bank 1">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="label" translatable="yes">128k</property>
+                                <property name="use_underline">True</property>
+                                <property name="draw_as_radio">True</property>
+                                <property name="group">bank 0</property>
+                                <signal name="toggled" handler="ram_changed" swapped="no"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkRadioMenuItem" id="bank 2">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="label" translatable="yes">192k</property>
+                                <property name="use_underline">True</property>
+                                <property name="draw_as_radio">True</property>
+                                <property name="group">bank 0</property>
+                                <signal name="toggled" handler="ram_changed" swapped="no"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkRadioMenuItem" id="bank 3">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="label" translatable="yes">320k</property>
+                                <property name="use_underline">True</property>
+                                <property name="draw_as_radio">True</property>
+                                <property name="group">bank 0</property>
+                                <signal name="toggled" handler="ram_changed" swapped="no"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkRadioMenuItem" id="bank 4">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="label" translatable="yes">574k</property>
+                                <property name="use_underline">True</property>
+                                <property name="draw_as_radio">True</property>
+                                <property name="group">bank 0</property>
+                                <signal name="toggled" handler="ram_changed" swapped="no"/>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkMenuItem">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">CRT type</property>
+                        <property name="use_underline">True</property>
+                        <child type="submenu">
+                          <object class="GtkMenu">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <child>
+                              <object class="GtkRadioMenuItem" id="crtc 0">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="label" translatable="yes">0 - Hitachi</property>
+                                <property name="use_underline">True</property>
+                                <property name="draw_as_radio">True</property>
+                                <signal name="toggled" handler="crtc_changed" swapped="no"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkRadioMenuItem" id="crtc 1">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="label" translatable="yes">1 - UMC</property>
+                                <property name="use_underline">True</property>
+                                <property name="draw_as_radio">True</property>
+                                <property name="group">crtc 0</property>
+                                <signal name="toggled" handler="crtc_changed" swapped="no"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkRadioMenuItem" id="crtc 2">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="label" translatable="yes">2 - Motorola</property>
+                                <property name="use_underline">True</property>
+                                <property name="draw_as_radio">True</property>
+                                <property name="group">crtc 0</property>
+                                <signal name="toggled" handler="crtc_changed" swapped="no"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkRadioMenuItem" id="crtc 3">
+                                <property name="visible">True</property>
+                                <property name="sensitive">False</property>
+                                <property name="can_focus">False</property>
+                                <property name="label" translatable="yes">3 -Amstrad ASIC</property>
+                                <property name="use_underline">True</property>
+                                <property name="draw_as_radio">True</property>
+                                <property name="group">crtc 0</property>
+                                <signal name="toggled" handler="crtc_changed" swapped="no"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkRadioMenuItem" id="crtc 4">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="label" translatable="yes">4 - Amstrad</property>
+                                <property name="use_underline">True</property>
+                                <property name="draw_as_radio">True</property>
+                                <property name="group">crtc 0</property>
+                                <signal name="toggled" handler="crtc_changed" swapped="no"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkSeparatorMenuItem">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkCheckMenuItem">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="label" translatable="yes">Standard V-Hold</property>
+                                <property name="use_underline">True</property>
+                                <property name="active">True</property>
+                                <signal name="toggled" handler="vhold_toggled" swapped="no"/>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkMenuItem">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">CPU clock</property>
+                        <property name="use_underline">True</property>
+                        <child type="submenu">
+                          <object class="GtkMenu">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <child>
+                              <object class="GtkRadioMenuItem" id="1x">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="label" translatable="yes">1x</property>
+                                <property name="use_underline">True</property>
                                 <property name="active">True</property>
                                 <property name="draw_as_radio">True</property>
-                                <property name="group">radiomenuitem1</property>
-                                <signal name="toggled" handler="model_changed" swapped="no"/>
+                                <signal name="toggled" handler="clock_changed" swapped="no"/>
                               </object>
                             </child>
                             <child>
                               <object class="GtkRadioMenuItem">
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
-                                <property name="label" translatable="yes">6128plus</property>
+                                <property name="label" translatable="yes">2x</property>
                                 <property name="use_underline">True</property>
                                 <property name="draw_as_radio">True</property>
-                                <property name="group">radiomenuitem1</property>
-                                <signal name="toggled" handler="model_changed" swapped="no"/>
+                                <property name="group">1x</property>
+                                <signal name="toggled" handler="clock_changed" swapped="no"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkRadioMenuItem">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="label" translatable="yes">3x</property>
+                                <property name="use_underline">True</property>
+                                <property name="draw_as_radio">True</property>
+                                <property name="group">1x</property>
+                                <signal name="toggled" handler="clock_changed" swapped="no"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkRadioMenuItem">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="label" translatable="yes">4x</property>
+                                <property name="use_underline">True</property>
+                                <property name="draw_as_radio">True</property>
+                                <property name="group">1x</property>
+                                <signal name="toggled" handler="clock_changed" swapped="no"/>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkSeparatorMenuItem">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkCheckMenuItem" id="plct 1">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">PlayCity audio</property>
+                        <property name="use_underline">True</property>
+                        <signal name="toggled" handler="machine_audio_changed" object="plct 2" swapped="no"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkCheckMenuItem" id="plct 2">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Digiblaster audio</property>
+                        <property name="use_underline">True</property>
+                        <signal name="toggled" handler="machine_audio_changed" object="plct 1" swapped="no"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkSeparatorMenuItem">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkMenuItem">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Dandanator</property>
+                        <property name="use_underline">True</property>
+                        <child type="submenu">
+                          <object class="GtkMenu">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <child>
+                              <object class="GtkMenuItem">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="label" translatable="yes">Insert...</property>
+                                <property name="use_underline">True</property>
+                                <signal name="activate" handler="dandanator_insert0" swapped="no"/>
+                                <accelerator key="F5" signal="activate" modifiers="GDK_SHIFT_MASK"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkMenuItem">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="label" translatable="yes">Remove</property>
+                                <property name="use_underline">True</property>
+                                <signal name="activate" handler="dandanator_remove0" swapped="no"/>
+                                <accelerator key="F5" signal="activate" modifiers="GDK_SHIFT_MASK | GDK_CONTROL_MASK"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkCheckMenuItem">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="label" translatable="yes">Writeable</property>
+                                <property name="use_underline">True</property>
+                                <signal name="toggled" handler="dandanator_writeable" swapped="no"/>
                               </object>
                             </child>
                           </object>
@@ -608,6 +898,52 @@ AmatCoder (GUI)</property>
             <property name="fill">True</property>
             <property name="position">3</property>
           </packing>
+        </child>
+      </object>
+    </child>
+    <child type="titlebar">
+      <placeholder/>
+    </child>
+  </object>
+  <object class="GtkAboutDialog" id="about_window">
+    <property name="can_focus">False</property>
+    <property name="modal">True</property>
+    <property name="destroy_with_parent">True</property>
+    <property name="type_hint">dialog</property>
+    <property name="skip_taskbar_hint">True</property>
+    <property name="skip_pager_hint">True</property>
+    <property name="transient_for">main_window</property>
+    <property name="program_name">CPCEG</property>
+    <property name="version">0.1</property>
+    <property name="copyright" translatable="yes">2018-2022 © Cesar Nicolas-Gonzalez
+2022 © AmatCoder
+
+Amstrad have kindly given their permission for the redistribution of their copyrighted material but retain that copyright.
+</property>
+    <property name="comments" translatable="yes">An emulator of the family of home microcomputers Amstrad CPC</property>
+    <property name="website">https://github.com/AmatCoder/CPCEG</property>
+    <property name="authors">Emulation by Cesar Nicolas-Gonzalez
+GTK port by AmatCoder</property>
+    <property name="logo_icon_name">image-missing</property>
+    <property name="license_type">gpl-3-0</property>
+    <child internal-child="vbox">
+      <object class="GtkBox">
+        <property name="can_focus">False</property>
+        <property name="orientation">vertical</property>
+        <property name="spacing">2</property>
+        <child internal-child="action_area">
+          <object class="GtkButtonBox">
+            <property name="can_focus">False</property>
+            <property name="layout_style">end</property>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <placeholder/>
         </child>
       </object>
     </child>

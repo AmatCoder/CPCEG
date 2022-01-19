@@ -1256,7 +1256,7 @@ int session_ui_filedialog(char *r,char *s,char *t,int q,int f) // see session_fi
         strcpy(session_parmtr,pastfile); // reuse previous name if possible
         if (session_ui_input(session_parmtr,t)>0)
         {
-					if (!multiglobbing(s,session_parmtr,1)) // unknown extension?
+          if (!multiglobbing(s,session_parmtr,1)) // unknown extension?
           {
             m=session_parmtr; n=s;
             while (*m) // go to end of target string
@@ -1418,8 +1418,6 @@ INLINE char *session_create(char *s) // create video+audio devices and set menu;
   session_clean(); session_please();
 
   SDL_SetHint (SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
-  gtk_create_window_new();
-  gtk_set_info1 (session_info);
   gtk_set_kbd ((unsigned char*)kbd_bit);
 
   return NULL;
@@ -1478,7 +1476,7 @@ INLINE int session_listen(void) // handle all pending messages; 0 OK, !0 EXIT
       session_please(),session_paused=1;
       session_redraw(1); // enabling pause or debug taints the screen!
     }
-    SDL_WaitEvent(NULL);
+    //SDL_WaitEvent(NULL);
   }
   int k; for (SDL_Event event;SDL_PollEvent(&event);)
   {
@@ -1682,7 +1680,7 @@ INLINE void session_render(void) // update video, audio and timers
       SDL_SetWindowTitle(session_hwnd,session_tmpstr);
 
       gchar* perf = g_strdup_printf ("%g%% CPU", performance_f*100.0/VIDEO_PLAYBACK);
-      gtk_set_info3 (perf);
+      gtk_set_info (session_info, perf);
       g_free (perf);
     }
     performance_t=i,performance_f=performance_b=session_paused=0;

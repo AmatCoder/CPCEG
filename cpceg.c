@@ -1,7 +1,7 @@
 /*
  * cpceg.c
  *
- * Copyright 2021 AmatCoder
+ * Copyright 2022 AmatCoder
  *
  * This file is part of CPCEG.
  *
@@ -29,33 +29,23 @@
 #define TARGET_RES_X (NATIVE_RES_X * 2)
 #define TARGET_RES_Y (NATIVE_RES_Y * 2)
 
-
+static GtkBuilder* builder;
 static GtkWidget *mainwindow;
 static cairo_surface_t *surface = NULL;
-static gboolean quit = FALSE;
 static GtkWidget *sbar1;
 static GtkWidget *sbar3;
-static GtkWidget *snap_menu;
-static GtkWidget *disca_menu;
-static GtkWidget *discb_menu;
-static GtkWidget *tape_menu;
 static gchar* conf_path = NULL;
+static gchar* info_t = NULL;
+static gchar* perf_t = NULL;
+static gboolean quit = FALSE;
+static gboolean disconnected = FALSE;
+static gboolean plus_enabled = FALSE;
 
 static unsigned char *kbd;
 
 // exported
-int any_load (char *s, int q);
-int snap_load(char *s);
-int snap_save(char *s);
-int disc_open(char *s,int drive,int canwrite);
-int disc_create(char *s);
-void disc_flip_sides(int drive);
-void disc_close(int drive);
-int tape_open(char *s);
-int tape_create(char *s);
 int bios_load(char *s);
-void all_reset(void);
-
+void session_clean(void);
 void session_user(int k);
 
 
@@ -161,9 +151,79 @@ gtk_update_cairo_surface (unsigned char* frame,
 
 
 void
+show_about (GtkWidget *object, gpointer window)
+{
+  session_user (0x0F00);
+
+  gtk_about_dialog_set_logo ((GtkAboutDialog*) window, NULL);
+  gtk_dialog_run (GTK_DIALOG (window));
+  gtk_widget_hide (window);
+
+  session_user (0x8F00);
+}
+
+
+static void
+rc_set_check (const gchar* setting)
+{
+  GObject* obj = gtk_builder_get_object (builder, setting);
+
+  if (GTK_IS_CHECK_MENU_ITEM (obj))
+    gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(obj), TRUE);
+}
+
+
+static void
+get_rc_settings (void)
+{
+  char* keys[] = {"snap", NULL};
+
+  gchar* value = NULL;
+  gchar* rc = g_strconcat (conf_path, G_DIR_SEPARATOR_S, ".cpcecrc", NULL);
+  if (g_file_test (rc, G_FILE_TEST_EXISTS))
+  {
+    gchar *contents;
+    gsize length;
+    if (g_file_get_contents ( rc, &contents, &length, NULL))
+    {
+      gchar** lines = g_strsplit (contents, "\n", -1);
+
+      int i = 0;
+      while (lines[i] != NULL)
+      {
+        rc_set_check (lines[i]);
+        gchar** values = g_strsplit (lines[i], " ", -1);
+        if (values[1] != NULL)
+        {
+          int j = 0;
+          while (keys[j] != NULL)
+          {
+            if (g_strcmp0 (keys[j], values[0]) == 0)
+            {
+              //printf("%s - *%s*\n",keys[j], values[1]);
+              GObject* obj = gtk_builder_get_object(builder, keys[j]);
+
+              if (GTK_IS_MENU_ITEM (obj))
+                gtk_menu_item_set_label (GTK_MENU_ITEM(obj), values[1]);
+            }
+            j++;
+          }
+        }
+        i++;
+        g_strfreev (values);
+      }
+      g_strfreev (lines);
+    }
+    g_free (contents);
+  }
+  g_free (rc);
+}
+
+
+void
 model_changed (GtkCheckMenuItem* self, gpointer user_data)
 {
-  if (!gtk_check_menu_item_get_active(self))
+  if (disconnected)
     return;
 
   const gchar *label = gtk_menu_item_get_label((GtkMenuItem*) self);
@@ -175,16 +235,293 @@ model_changed (GtkCheckMenuItem* self, gpointer user_data)
     rom = "cpc664.rom";
   else if (g_strcmp0(label, "6128") == 0)
     rom = "cpc6128.rom";
-  else if (g_strcmp0(label, "6128plus") == 0)
+  else if (g_strcmp0(label, "Plus") == 0)
     rom = "cpcplus.rom";
-  else if (g_strcmp0(label, "cpcados") == 0)
-    rom = "cpcados.rom";
 
   if (rom != NULL)
   {
     gchar* rom_path = g_strconcat (conf_path, rom, NULL);
     bios_load (rom_path);
-    all_reset();
+    session_user (0x0500);
+    session_clean();
+  }
+}
+
+
+void
+clock_changed (GtkWidget *object, gpointer data)
+{
+  if (disconnected)
+    return;
+
+  const gchar* label = gtk_menu_item_get_label (GTK_MENU_ITEM(object));
+
+  switch (label[0])
+  {
+    case '1':
+      session_user (0x0601);
+      break;
+    case '2':
+      session_user (0x0602);
+      break;
+    case '3':
+      session_user (0x0603);
+      break;
+    default:
+      session_user (0x0604);
+  }
+
+  session_clean();
+}
+
+
+void
+ram_changed (GtkWidget *object, gpointer data)
+{
+  if (disconnected)
+    return;
+
+  const gchar* label = gtk_menu_item_get_label (GTK_MENU_ITEM(object));
+  switch (label[2])
+  {
+    case 'k':
+      session_user (0x8511);
+      break;
+    case '8':
+      session_user (0x8512);
+      break;
+    case '2':
+      session_user (0x8513);
+      break;
+    case '0':
+      session_user (0x8514);
+      break;
+    default:
+      session_user (0x8515);
+  }
+
+  session_clean();
+}
+
+
+static void
+crtc_sensitive (void)
+{
+  GObject* obj = gtk_builder_get_object(builder, "crtc 3");
+  gtk_widget_set_sensitive (GTK_WIDGET (obj), plus_enabled);
+
+  obj = gtk_builder_get_object(builder, "crtc 0");
+  gtk_widget_set_sensitive (GTK_WIDGET (obj), !plus_enabled);
+
+  obj = gtk_builder_get_object(builder, "crtc 1");
+  gtk_widget_set_sensitive (GTK_WIDGET (obj), !plus_enabled);
+
+  obj = gtk_builder_get_object(builder, "crtc 2");
+  gtk_widget_set_sensitive (GTK_WIDGET (obj), !plus_enabled);
+
+  obj = gtk_builder_get_object(builder, "crtc 4");
+  gtk_widget_set_sensitive (GTK_WIDGET (obj), !plus_enabled);
+}
+
+
+void
+crtc_changed (GtkWidget *object, gpointer data)
+{
+  if (disconnected)
+    return;
+
+  const gchar* label = gtk_menu_item_get_label (GTK_MENU_ITEM(object));
+
+  switch (label[0])
+  {
+    case '0':
+      session_user (0x8501);
+      break;
+    case '1':
+      session_user (0x8502);
+      break;
+    case '2':
+      session_user (0x8503);
+      break;
+    case '3':
+      //session_user (0x8504);
+      break;
+    default:
+      session_user (0x8505);
+  }
+
+  session_clean();
+}
+
+
+static void
+set_menu_check (const gchar* id)
+{
+  GObject *menu =  gtk_builder_get_object(builder, id);
+
+  if (menu)
+    gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(menu), TRUE);
+}
+
+
+void gtk_set_info (const char* info, const char* perf)
+{
+  if (g_strcmp0 (perf, perf_t) != 0)
+  {
+    g_free (perf_t);
+    perf_t = g_strdup (perf);
+    gtk_label_set_text ((GtkLabel*)sbar3, perf_t);
+  }
+
+  if ((info != NULL) && (g_strcmp0 (info, info_t) != 0))
+  {
+    disconnected = TRUE;
+
+    g_free (info_t);
+    info_t = g_strdup (info);
+    gtk_label_set_text ((GtkLabel*)sbar1, info_t);
+
+    gchar** fields = g_strsplit_set (info_t,": ", 5);
+
+    gchar* type;
+    char b = fields[0][3];
+    switch (b)
+    {
+      case '4' :
+        type = "type 0";
+        break;
+      case '6' :
+        if (fields[0][4] == '6')
+          type = "type 1";
+        else
+          type = "type 2";
+        break;
+      default :
+        type = "type 3";
+     }
+
+    set_menu_check (type);
+
+    gchar* manufacturer;
+    char c = fields[3][4];
+    switch (c)
+    {
+      case '0' :
+        manufacturer = "Hitachi";
+        break;
+      case '1' :
+        manufacturer = "UMC";
+        break;
+      case '2' :
+        manufacturer = "Motorola";
+        break;
+      case '3' :
+        manufacturer = "Amstrad ASIC";
+        break;
+      default :
+        manufacturer = "Amstrad";
+     }
+
+    gchar* crtc = g_strdup_printf ("crtc %c", c);
+    set_menu_check (crtc);
+    g_free (crtc);
+
+    gchar* bank;
+    char d = fields[2][2];
+    switch (d)
+    {
+      case 'K' :
+        bank = "bank 0";
+        break;
+      case '8' :
+        bank = "bank 1";
+        break;
+      case '2' :
+        bank = "bank 2";
+        break;
+      case '0' :
+        bank = "bank 3";
+        break;
+      default :
+        bank = "bank 4";
+     }
+
+    set_menu_check (bank);
+
+    gchar* tooltip = g_strdup_printf ("Model: %s\n\
+Actually used RAM space: %s\n\
+RAM configuration: %s\n\
+CRTC type: %c - %s\n\
+Clock speed: %s", fields[0], fields[1], fields[2], c, manufacturer, fields[4]);
+
+    plus_enabled = (fields[0][3] == 'P');
+    crtc_sensitive();
+
+    g_strfreev (fields);
+
+    gtk_widget_set_tooltip_text (sbar1, tooltip);
+    g_free (tooltip);
+
+    disconnected = FALSE;
+  }
+}
+
+void
+gtk_quit (GtkWidget *object, gpointer data)
+{
+  quit = TRUE;
+}
+
+
+int
+gtk_loop (void)
+{
+  while (gtk_events_pending())
+    gtk_main_iteration();
+
+  if (quit)
+    return 1;
+
+  return 0;
+}
+
+
+void
+gtk_create_window_new (void)
+{
+  GtkWidget *blackbox;
+  GtkWidget *drawing_area;
+  GtkTargetEntry targetentries[] = {"text/uri-list", 0, 0};
+
+  gtk_init (NULL, NULL);
+
+  builder = gtk_builder_new();
+  gtk_builder_add_from_file (builder, "./share/glade/cpceg.ui", NULL);
+
+  mainwindow = GTK_WIDGET (gtk_builder_get_object(builder, "main_window"));
+  blackbox = GTK_WIDGET (gtk_builder_get_object(builder, "black_box"));
+  drawing_area = GTK_WIDGET (gtk_builder_get_object(builder, "drawing"));
+  sbar1 = GTK_WIDGET (gtk_builder_get_object(builder, "sbar_1"));
+  sbar3 = GTK_WIDGET (gtk_builder_get_object(builder, "sbar_3"));
+
+  gtk_widget_set_size_request (drawing_area, NATIVE_RES_X, NATIVE_RES_Y);
+
+  gtk_window_set_default_icon (gdk_pixbuf_new_from_resource ("/com/github/AmatCoder/CPCEG/cpcec.png", NULL));
+
+  GtkCssProvider *css = gtk_css_provider_new();
+  gtk_css_provider_load_from_data(css, "* {background-color:black;}", -1, NULL);
+  GtkStyleContext *context = gtk_widget_get_style_context (blackbox);
+  gtk_style_context_add_provider (context, GTK_STYLE_PROVIDER(css), GTK_STYLE_PROVIDER_PRIORITY_USER);
+  g_object_unref (css);
+
+  gtk_drag_dest_set (mainwindow, GTK_DEST_DEFAULT_DROP, targetentries, 1, GDK_ACTION_LINK);
+
+  gtk_widget_show_all (mainwindow);
+
+  while (gtk_events_pending())
+  {
+    gtk_main_iteration();
+    gtk_widget_queue_draw (drawing_area);
   }
 }
 
@@ -228,490 +565,9 @@ gtk_session_init (char* session_path)
   }
 
   g_strlcpy (session_path, conf_path, PATH_MAX);
-}
 
-
-static gboolean
-check_header (const gchar* content, const char* header)
-{
-  guint i;
-  for (i = 0; i < 8; i++)
-  {
-    if (header[i] != content[i])
-      return FALSE;
-  }
-
-  return TRUE;
-}
-
-
-static void
-check_menu (const gchar* filename)
-{
-  const char snap_header[8] = { 0x4D, 0x56, 0x20, 0x2D, 0x20, 0x53, 0x4E, 0x41 };
-  const char dsk_header[8] = { 0x45, 0x58, 0x54, 0x45, 0x4E, 0x44, 0x45, 0x44 };
-  const char mvc_header[8] = { 0x4D, 0x56, 0x20, 0x2D, 0x20, 0x43, 0x50, 0x43 };
-  const char tzx_header[8] = { 0x5A, 0x58, 0x54, 0x61, 0x70, 0x65, 0x21, 0x1A };
-  const char csw_header[8] = { 0x43, 0x6F, 0x6D, 0x70, 0x72, 0x65, 0x73, 0x73 }; // TODO: wav & cpr files
-
-  gchar *contents;
-  gsize length;
-  if (g_file_get_contents (filename, &contents, &length, NULL))
-  {
-    if (length > 8)
-    {
-      GtkMenuItem* menu = NULL;
-      if (check_header (contents, snap_header))
-        menu = ((GtkMenuItem*) snap_menu);
-      else if ((check_header (contents, dsk_header)) || (check_header (contents, mvc_header)))
-        menu = ((GtkMenuItem*) disca_menu);  //only on A?
-      else if ( (check_header (contents, tzx_header)) || (check_header (contents, csw_header)) )
-        menu = ((GtkMenuItem*) tape_menu);
-
-      if (menu != NULL)
-      {
-        gtk_menu_item_set_label ((GtkMenuItem*) tape_menu, "Empty");
-        gtk_menu_item_set_label ((GtkMenuItem*) disca_menu, "Empty");
-        gtk_menu_item_set_label ((GtkMenuItem*) discb_menu, "Empty");
-
-        gchar* basename = g_path_get_basename (filename);
-        gtk_menu_item_set_label (menu, basename);
-        g_free (basename);
-      }
-    }
-  }
-  g_free (contents);
-}
-
-
-static gchar*
-dialog_run (GtkWidget* dialog)
-{
-  gchar* filename = NULL;
-  session_user (0x0F00);
-
-  if (gtk_dialog_run ((GtkDialog*) dialog) == ((gint) GTK_RESPONSE_ACCEPT))
-    filename = gtk_file_chooser_get_filename ((GtkFileChooser*) dialog);
-
-  gtk_widget_destroy (dialog);
-  session_user (0x0F00);
-
-  return filename;
-}
-
-
-static gchar*
-dialog_save_file (const gchar* title, const gchar* current_name)
-{
-  gchar* filename = NULL;
-  GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_SAVE;
-
-  GtkWidget *dialog = gtk_file_chooser_dialog_new (title,
-                                                   (GtkWindow*) mainwindow,
-                                                   action,
-                                                   "_Save",
-                                                   GTK_RESPONSE_ACCEPT,
-                                                   "_Cancel",
-                                                   GTK_RESPONSE_CANCEL,
-                                                   NULL);
-
-
-  gtk_file_chooser_set_do_overwrite_confirmation ((GtkFileChooser*) dialog, TRUE);
-  gtk_file_chooser_set_current_name ((GtkFileChooser*) dialog, current_name);
-
-  return dialog_run (dialog);
-}
-
-
-static gchar*
-dialog_load_file (const gchar* title,
-                  gchar** patterns,
-                  const gchar* filter_name)
-{
-  GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_OPEN;
-
-  GtkWidget *dialog = gtk_file_chooser_dialog_new (title,
-                                                   (GtkWindow*) mainwindow,
-                                                   action,
-                                                   "_Open",
-                                                   GTK_RESPONSE_ACCEPT,
-                                                   "_Cancel",
-                                                   GTK_RESPONSE_CANCEL,
-                                                   NULL);
-
-  GtkFileFilter *filter = gtk_file_filter_new ();
-
-  guint i = 0;
-  while (patterns[i] != NULL)
-  {
-    gtk_file_filter_add_pattern (filter, patterns[i]);
-    i++;
-  }
-
-  gtk_file_filter_set_name (filter, filter_name);
-  gtk_file_chooser_add_filter ((GtkFileChooser*) dialog, filter);
-
-  GtkFileFilter *filter2 = gtk_file_filter_new ();
-  gtk_file_filter_add_pattern (filter2, "*");
-
-  gtk_file_filter_set_name (filter2, "All files (*.*)");
-  gtk_file_chooser_add_filter ((GtkFileChooser*) dialog, filter2);
-
-  return dialog_run (dialog);
-}
-
-
-static int
-get_disc_drive (gpointer item)
-{
-  const gchar *label = gtk_menu_item_get_label((GtkMenuItem*) item);
-
-  return (label[5] == 'A') ? 0 : 1;
-}
-
-
-void
-disca_insert (GtkWidget *object, gpointer data)
-{
-  gchar* patterns[] = {"*.dsk", NULL};
-  gchar* filename = dialog_load_file ("Select a disc...", patterns, "Disc files (*.dsk)");
-
-  if (filename != NULL)
-  {
-    int d = get_disc_drive (data);
-    if (disc_open (filename, d, 0))
-      printf ("Cannot open disc!\n");
-    else
-    {
-      gchar* basename = g_path_get_basename (filename);
-      gtk_menu_item_set_label ((d == 0) ? (GtkMenuItem*) disca_menu : (GtkMenuItem*) discb_menu, basename);
-      g_free (basename);
-    }
-    g_free (filename);
-  }
-}
-
-
-void
-disca_create (GtkWidget *object, gpointer data)
-{
-  gchar* filename = dialog_save_file ("New disc...", "Untitled.dsk");
-
-  if (filename != NULL)
-  {
-    if (disc_create (filename))
-      printf ("Cannot save disc!\n");
-    else
-    {
-      int d = get_disc_drive (data);
-      disc_open (filename, d, 1);
-
-      gchar* basename = g_path_get_basename (filename);
-      gtk_menu_item_set_label ((d == 0) ? (GtkMenuItem*) disca_menu : (GtkMenuItem*) discb_menu, basename);
-      g_free (basename);
-    }
-    g_free (filename);
-  }
-}
-
-
-void
-disca_flip (GtkCheckMenuItem* self, gpointer data)
-{
-  int d = get_disc_drive (data);
-  disc_flip_sides (d);
-}
-
-
-void
-disca_remove (GtkWidget *object, gpointer data)
-{
-  int d = get_disc_drive (data);
-  disc_close (d);
-
-  gtk_menu_item_set_label ((d == 0) ? (GtkMenuItem*) disca_menu : (GtkMenuItem*) discb_menu, "Empty");
-}
-
-
-void
-tape_remove (GtkWidget *object, gpointer data)
-{
-  session_user (0x0800);
-  gtk_menu_item_set_label ((GtkMenuItem*) tape_menu, "Empty");
-}
-
-
-void
-tape_record_menu (GtkWidget *object, gpointer data)
-{
-  gchar* filename = dialog_save_file ("New tape...", "Untitled.csw");
-  if (filename != NULL)
-  {
-    if (tape_create (filename))
-      printf ("Cannot save tape!\n");
-    else
-    {
-      gchar* basename = g_path_get_basename (filename);
-      gtk_menu_item_set_label ((GtkMenuItem*) tape_menu, basename);
-      g_free (basename);
-    }
-    g_free (filename);
-  }
-}
-
-
-void
-tape_insert (GtkWidget *object, gpointer data)
-{
-  gchar* patterns[] = {"*.cdt", "*.tzx", "*.csw", "*.wav", NULL};
-  gchar* filename = dialog_load_file ("Select a tape...", patterns, "Tape files (*.cdt, *.tzx, *.csw, *.wav)");
-
-  if (filename != NULL)
-  {
-    if (tape_open (filename))
-      printf ("Cannot open tape!\n");
-    else
-    {
-      gchar* basename = g_path_get_basename (filename);
-      gtk_menu_item_set_label ((GtkMenuItem*) tape_menu, basename);
-      g_free (basename);
-    }
-    g_free (filename);
-  }
-}
-
-
-void
-snap_last (GtkWidget *object, gpointer data)
-{
-  const gchar* mode = gtk_menu_item_get_label ((GtkMenuItem*) object);
-
-  (mode[0] == 'S') ? session_user (0x0200) : session_user (0x0300);
-}
-
-
-void
-snap_file (GtkWidget *object, gpointer data)
-{
-  gchar* filename;
-  const gchar* mode = gtk_menu_item_get_label ((GtkMenuItem*) object);
-
-  if (mode[0] == 'S')
-  {
-    filename = dialog_save_file ("Save snapshot...", "Untitled.sna");
-  }
-  else
-  {
-    gchar* patterns[] = {"*.sna", NULL};
-    filename = dialog_load_file ("Load snapshot", patterns, "Snapshot files (*.sna)");
-  }
-
-  if (filename != NULL)
-  {
-    int e = 0;
-    if (mode[0] == 'S')
-      e = snap_save (filename);
-    else
-      e = snap_load (filename);
-
-    if (e != 0)
-      printf ("Error\n");
-    else
-    {
-      gchar* basename = g_path_get_basename (filename);
-      gtk_menu_item_set_label ((GtkMenuItem*) snap_menu, basename);
-      g_free (basename);
-    }
-
-    g_free (filename);
-  }
-}
-
-
-static void
-load_any_file (gchar* filename)
-{
-  int e = 0;
-  if (filename != NULL)
-    e = any_load (filename, 1);
-
-  if (e != 0)
-    printf ("Error\n");
-  else
-    check_menu (filename);
-}
-
-
-void
-load_any_menu (GtkWidget *object, gpointer data)
-{
-  gchar* patterns[] = {"*.sna", "*.dsk", "*.cpr", "*.rom", "*.cdt", "*.tzx", "*.csw", "*.wav", NULL};
-  gchar* filename = dialog_load_file ("Select any file...", patterns, "CPC files (*.sna, *.dsk, *.cpr, *.rom, *.cdt, *.tzx, *.csw, *.wav)");
-  if (filename != NULL)
-  {
-    load_any_file (filename);
-    g_free (filename);
-  }
-}
-
-
-void
-drag_data (GtkWidget *self,
-           GdkDragContext *context,
-           gint x,
-           gint y,
-           GtkSelectionData *seldata,
-           guint info,
-           guint time,
-           gpointer data)
-{
-  gchar **uris = g_uri_list_extract_uris (gtk_selection_data_get_data (seldata));
-
-  if (uris == NULL)
-  {
-    gtk_drag_finish (context, FALSE, FALSE, time);
-    return;
-  }
-
-  gchar* filename = g_filename_from_uri (uris[0], NULL, NULL);
-
-  if (filename != NULL)
-    load_any_file (filename);
-  else
-  {
-    g_strfreev (uris);
-    gtk_drag_finish (context, FALSE, FALSE, time);
-    return;
-  }
-
-  g_free (filename);
-  g_strfreev (uris);
-
-  gtk_drag_finish (context, TRUE, FALSE, time);
-}
-
-
-void
-gtk_quit (GtkWidget *object, gpointer data)
-{
-  quit = TRUE;
-}
-
-
-void
-show_about (GtkWidget *object, gpointer window)
-{
-  session_user (0x0F00);
-
-  gtk_about_dialog_set_logo ((GtkAboutDialog*) window, NULL);
-  gtk_dialog_run (GTK_DIALOG (window));
-  gtk_widget_hide (window);
-
-  session_user (0x0F00);
-}
-
-
-void gtk_set_info3 (const char* perf)
-{
-  gtk_label_set_text ((GtkLabel*)sbar3, perf);
-}
-
-
-void gtk_set_info1 (const char* info)
-{
-  gtk_label_set_text ((GtkLabel*)sbar1, info);
-
-  gchar** fields = g_strsplit_set (info,": ", 4);
-
-  gchar* manufacturer;
-  char c = fields[2][4];
-  switch (c)
-  {
-    case '0' :
-      manufacturer = "Hitachi";
-      break;
-    case '1' :
-      manufacturer = "UMC";
-      break;
-    case '2' :
-      manufacturer = "Motorola";
-      break;
-    case '3' :
-      manufacturer = "Amstrad ASIC";
-      break;
-    default :
-      manufacturer = "Amstrad";
-   }
-
-  gchar* tooltip = g_strdup_printf ("Actually used RAM space: %sK\n\
-RAM configuration: %s\n\
-CRTC type: %c - %s\n\
-Clock speed: %s", fields[0], fields[1], c, manufacturer, fields[3]);
-
-  g_strfreev (fields);
-
-  gtk_widget_set_tooltip_text (sbar1, tooltip);
-
-  g_free (tooltip);
-}
-
-
-void
-gtk_create_window_new (void)
-{
-  GtkWidget *blackbox;
-  GtkWidget *drawing_area;
-  GtkTargetEntry targetentries[] = {"text/uri-list", 0, 0};
-
-  gtk_init (NULL, NULL);
-
-  GtkBuilder* builder = gtk_builder_new();
-  gtk_builder_add_from_file (builder, "./share/glade/cpceg.ui", NULL);
-
-  mainwindow = GTK_WIDGET (gtk_builder_get_object(builder, "main_window"));
-  blackbox = GTK_WIDGET (gtk_builder_get_object(builder, "black_box"));
-  drawing_area = GTK_WIDGET (gtk_builder_get_object(builder, "drawing"));
-  sbar1 = GTK_WIDGET (gtk_builder_get_object(builder, "sbar_1"));
-  sbar3 = GTK_WIDGET (gtk_builder_get_object(builder, "sbar_3"));
-
-  snap_menu = GTK_WIDGET (gtk_builder_get_object(builder, "snap_menu"));
-  disca_menu = GTK_WIDGET (gtk_builder_get_object(builder, "disca_menu"));
-  discb_menu = GTK_WIDGET (gtk_builder_get_object(builder, "discb_menu"));
-  tape_menu = GTK_WIDGET (gtk_builder_get_object(builder, "tape_menu"));
-
-  gtk_builder_connect_signals (builder, NULL);
-  g_object_unref(builder);
-
-  gtk_widget_set_size_request (drawing_area, NATIVE_RES_X, NATIVE_RES_Y);
-
-  gtk_window_set_default_icon (gdk_pixbuf_new_from_resource ("/com/github/AmatCoder/CPCEG/cpcec.png", NULL));
-
-  GtkCssProvider *css = gtk_css_provider_new();
-  gtk_css_provider_load_from_data(css, "* {background-color:black;}", -1, NULL);
-  GtkStyleContext *context = gtk_widget_get_style_context (blackbox);
-  gtk_style_context_add_provider (context, GTK_STYLE_PROVIDER(css), GTK_STYLE_PROVIDER_PRIORITY_USER);
-  g_object_unref (css);
-
-  gtk_drag_dest_set (mainwindow, GTK_DEST_DEFAULT_DROP, targetentries, 1, GDK_ACTION_LINK);
-
-  gtk_widget_show_all (mainwindow);
-
-  while (gtk_events_pending())
-  {
-    gtk_main_iteration();
-    gtk_widget_queue_draw (drawing_area);
-  }
-}
-
-
-int
-gtk_loop (void)
-{
-  while (gtk_events_pending())
-    gtk_main_iteration();
-
-  if (quit)
-    return 1;
-
-  return 0;
+  gtk_create_window_new();
+  get_rc_settings();
+  gtk_builder_connect_signals (builder, builder);
+  //g_object_unref(builder);
 }

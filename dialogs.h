@@ -1,5 +1,5 @@
 /*
- * cpceg.h
+ * dialogs.h
  *
  * Copyright 2022 AmatCoder
  *
@@ -21,19 +21,16 @@
  *
  */
 
-#ifndef __CPCEG_H__
-#define __CPCEG_H__
+#ifndef __DIALOGS_H__
+#define __DIALOGS_H__
 
 #include <gtk/gtk.h>
 
 G_BEGIN_DECLS
 
-void gtk_create_window_new (void);
-int gtk_loop (void);
-void gtk_update_cairo_surface (unsigned char* frame, int offset_x, int offset_y, int stride);
-void gtk_set_kbd (unsigned char* kdb_bit);
-void gtk_set_info (const char* info, const char* perf);
-void gtk_session_init (char* session_path);
+void show_error (const gchar* message);
+gchar* dialog_save_file (const gchar* title, const gchar* current_name);
+gchar* dialog_load_file (const gchar* title, gchar** patterns, const gchar* filter_name);
 
 G_END_DECLS
 

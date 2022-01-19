@@ -3573,8 +3573,9 @@ void session_clean(void) // refresh options
 	#endif
 	#endif
 	video_resetscanline(); // video scanline cfg
-	sprintf(session_info,"%d:%dK %s%c %0.1fMHz"//" | disc %s | tape %s | %s"
-		,gate_ram_dirty,gate_ram_kbyte[gate_ram_depth],plus_enabled?"ASIC":"CRTC",48+crtc_type,4.0*multi_t);
+  char* models[4] = {"464", "664", "6128", "Plus"};
+	sprintf(session_info,"CPC%s %d:%dK %s%c %0.1fMHz"//" | disc %s | tape %s | %s"
+		,models[type_id],gate_ram_dirty,gate_ram_kbyte[gate_ram_depth],plus_enabled?"ASIC":"CRTC",48+crtc_type,4.0*multi_t);
 	video_lastscanline=video_table[video_type][20]; // BLACK in the CLUT
 	video_halfscanline=VIDEO_FILTER_SCAN(video_table[video_type][11],video_lastscanline); // WHITE in the CLUT
 	*debug_buffer=128; // force debug redraw! (somewhat overkill)
