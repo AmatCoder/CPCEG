@@ -139,6 +139,7 @@ gtk_update_cairo_surface (unsigned char* frame,
                                                    stride);
 
     cairo_surface_set_device_offset (surface, offset_x, offset_y);
+    gtk_widget_queue_draw (mainwindow);
   }
   else
   {
@@ -518,11 +519,7 @@ gtk_create_window_new (void)
 
   gtk_widget_show_all (mainwindow);
 
-  while (gtk_events_pending())
-  {
-    gtk_main_iteration();
-    gtk_widget_queue_draw (drawing_area);
-  }
+  gtk_loop();
 }
 
 
