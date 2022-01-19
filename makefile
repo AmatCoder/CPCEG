@@ -1,6 +1,6 @@
 APP = cpceg
 
-CFLAGS = -DSDL2 -Wl,—export-dynamic `pkg-config --cflags sdl2 gtk+-3.0 gmodule-export-2.0`
+CFLAGS = -DSDL2 -Wl,-export-dynamic `pkg-config --cflags sdl2 gtk+-3.0 gmodule-export-2.0`
 LDFLAGS = `pkg-config --libs sdl2 gtk+-3.0 gmodule-export-2.0 `
 
 SOURCE_FILES = cpceg.c cpcec.c file.c machine.c dialogs.c resources.c
