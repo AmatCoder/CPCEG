@@ -262,7 +262,7 @@ rc_set_misc (const gchar* setting, const gchar* value)
 
 
 static void
-rc_set_check (const gchar* setting)
+set_menu_check (const gchar* setting)
 {
   GObject* obj = gtk_builder_get_object (builder, setting);
 
@@ -289,7 +289,8 @@ get_rc_settings (void)
       int i = 0;
       while (lines[i] != NULL)
       {
-        rc_set_check (lines[i]);
+        set_menu_check (lines[i]);
+
         gchar** values = g_strsplit (lines[i], " ", -1);
         if (values[1] != NULL)
         {
@@ -455,16 +456,6 @@ crtc_changed (GtkWidget *object, gpointer data)
   }
 
   session_clean();
-}
-
-
-static void
-set_menu_check (const gchar* id)
-{
-  GObject *menu =  gtk_builder_get_object(builder, id);
-
-  if (menu)
-    gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(menu), TRUE);
 }
 
 
