@@ -72,15 +72,15 @@ set_menu_files_labels (const gchar* filename, gpointer builder)
       if (match_header (contents, snap_header))
         menu = ((GtkMenuItem*) gtk_builder_get_object (builder, "snap"));
       else if ((match_header (contents, dsk_header)) || (match_header (contents, mvc_header)))
-        menu = ((GtkMenuItem*) gtk_builder_get_object (builder, "disca_menu"));  //only on A?
-      else if ( (match_header (contents, tzx_header)) || (match_header (contents, csw_header)) )
+        menu = ((GtkMenuItem*) gtk_builder_get_object (builder, "disc"));  //only on A?
+      else if ( (match_header (contents, tzx_header)) || (match_header (contents, csw_header)))
         menu = ((GtkMenuItem*) gtk_builder_get_object (builder, "tape_menu"));
 
       if (menu != NULL)
       {
         gtk_menu_item_set_label ((GtkMenuItem*) gtk_builder_get_object (builder, "tape_menu"), "Empty");
-        gtk_menu_item_set_label ((GtkMenuItem*) gtk_builder_get_object (builder, "disca_menu"), "Empty");
-        gtk_menu_item_set_label ((GtkMenuItem*) gtk_builder_get_object (builder, "discb_menu"), "Empty");
+        gtk_menu_item_set_label ((GtkMenuItem*) gtk_builder_get_object (builder, "disc"), "Empty");
+        gtk_menu_item_set_label ((GtkMenuItem*) gtk_builder_get_object (builder, "discb"), "Empty");
 
         gchar* basename = g_path_get_basename (filename);
         gtk_menu_item_set_label (menu, basename);

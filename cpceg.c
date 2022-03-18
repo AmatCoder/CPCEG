@@ -242,20 +242,17 @@ show_about (GtkWidget *object, gpointer window)
 static void
 rc_set_misc (const gchar* setting, const gchar* value)
 {
-  if ((strlen(setting) < 3) || (strlen(value) < 1))
-    return;
-
-  if (setting[0] == 'm')
+  if (g_strcmp0 (setting, "misc") == 0)
   {
     gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "misc1")), ((*value&1) == 1));
     gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "misc2")), !!(*value&2) == 0);
   }
-  else if ((setting[0] == 'f') && (setting[1] == 'd'))
+  else if (g_strcmp0 (setting, "fdcw") == 0)
   {
     gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "fdcw1")), !!(*value&2) == 0);
     gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "fdcw2")), ((*value&1) == 1));
   }
-  else if ((setting[0] == 'c') && (setting[2] == 's'))
+  else if (g_strcmp0 (setting, "casette") == 0)
   {
     gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "casette1")), (!!(*value&2) == 1));
     gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "casette2")), (!!(*value&4) == 1));
@@ -307,7 +304,11 @@ get_rc_settings (void)
               GObject* obj = gtk_builder_get_object(builder, keys[j]);
 
               if (GTK_IS_MENU_ITEM (obj))
-                gtk_menu_item_set_label (GTK_MENU_ITEM(obj), values[1]);
+              {
+                gchar* basename = g_path_get_basename (values[1]);
+                gtk_menu_item_set_label (GTK_MENU_ITEM(obj), basename);
+                g_free (basename);
+              }
             }
             j++;
           }
