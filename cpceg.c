@@ -40,6 +40,8 @@ static gchar* perf_t = NULL;
 static gboolean quit = FALSE;
 static gboolean disconnected = FALSE;
 static gboolean plus_enabled = FALSE;
+static gboolean vjoy_enabled = FALSE;
+static gint flip_joy = 0;
 
 static unsigned char *kbd;
 
@@ -47,6 +49,9 @@ static unsigned char *kbd;
 int bios_load(char *s);
 void session_clean(void);
 void session_user(int k);
+
+void set_motion(int x, int y);
+void set_button(int z);
 
 
 static const unsigned char kbd_map_gdk[]=
@@ -71,6 +76,32 @@ static const unsigned char kbd_map_gdk[]=
   0, 0, 0, 0, 0, 0, 0, 0
 };
 
+static unsigned char kbd_j[]=
+{ 0x6F, 0x48,
+  0x74, 0x49,
+  0x71, 0x4A,
+  0x72, 0x4B,
+  0x34, 0x4C,
+  0x35, 0x4D,
+  0x36, 0x4C,
+  0x37, 0x4D
+};
+
+
+static int
+key_to_joy (int k)
+{
+  if (vjoy_enabled)
+  {
+    int i;
+    for (i = 0; i < 12; i += 2)
+      if (kbd_j[i]==k)
+        return kbd_j[i+1];
+  }
+
+  return kbd_map_gdk[k];
+}
+
 
 gboolean
 key_event (GtkWidget *widget,
@@ -80,7 +111,7 @@ key_event (GtkWidget *widget,
   if (event->key.hardware_keycode > 127)
     return TRUE;
 
-  guint k = kbd_map_gdk[event->key.hardware_keycode];
+  guint k = key_to_joy (event->key.hardware_keycode);
 
   if (event->key.type == GDK_KEY_PRESS)
     kbd[k/8]|=1<<(k%8);
@@ -94,9 +125,30 @@ key_event (GtkWidget *widget,
 
 
 void
-gtk_set_kbd (unsigned char* kdb_bit)
+gtk_set_kbd (unsigned char* kbd_bit)
 {
-  kbd = kdb_bit;
+  kbd = kbd_bit;
+}
+
+
+void
+virtual_joystick (GtkCheckMenuItem* self, gpointer data)
+{
+  //session_user (0x0400);
+  vjoy_enabled = gtk_check_menu_item_get_active (self);
+}
+
+
+void
+flip_joystick (GtkCheckMenuItem* self, gpointer data)
+{
+  session_user (0x0401);
+  session_clean();
+
+  flip_joy = gtk_check_menu_item_get_active (self) ? 1 : 0;
+
+	kbd_j[9] = kbd_j[13] = (0x4C + flip_joy);
+	kbd_j[11] = kbd_j[15] = (0x4D - flip_joy);
 }
 
 
@@ -151,6 +203,29 @@ gtk_update_cairo_surface (unsigned char* frame,
 }
 
 
+gboolean
+mouse_moved (GtkWidget* widget, GdkEventMotion* event)
+{
+  GtkAllocation allocation;
+  gtk_widget_get_allocation (widget, &allocation);
+
+  //printf("%i - %i - %i - %i\n", (int)allocation.width/TARGET_RES_X, (int)allocation.height/TARGET_RES_Y, (int)event->x, (int)event->y);
+  //printf("%f - %f\n", (event->x/((double)allocation.width/(TARGET_RES_X))), (event->y/((double)allocation.height/(TARGET_RES_Y))));
+
+  set_motion( (int)(event->x/((double)allocation.width/(TARGET_RES_X))), (int)(event->y/((double)allocation.height/(TARGET_RES_Y))) );
+
+  return TRUE;
+}
+
+
+gboolean
+mouse_button_event (GtkWidget* widget, GdkEventButton* event)
+{
+  set_button (event->type == GDK_BUTTON_PRESS);
+  return TRUE;
+}
+
+
 void
 show_about (GtkWidget *object, gpointer window)
 {
@@ -161,6 +236,31 @@ show_about (GtkWidget *object, gpointer window)
   gtk_widget_hide (window);
 
   session_user (0x8F00);
+}
+
+
+static void
+rc_set_misc (const gchar* setting, const gchar* value)
+{
+  if ((strlen(setting) < 3) || (strlen(value) < 1))
+    return;
+
+  if (setting[0] == 'm')
+  {
+    gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "misc1")), ((*value&1) == 1));
+    gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "misc2")), !!(*value&2) == 0);
+  }
+  else if ((setting[0] == 'f') && (setting[1] == 'd'))
+  {
+    gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "fdcw1")), !!(*value&2) == 0);
+    gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "fdcw2")), ((*value&1) == 1));
+  }
+  else if ((setting[0] == 'c') && (setting[2] == 's'))
+  {
+    gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "casette1")), (!!(*value&2) == 1));
+    gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "casette2")), (!!(*value&4) == 1));
+    gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "casette3")), ((*value&1) == 1));
+  }
 }
 
 
@@ -196,6 +296,8 @@ get_rc_settings (void)
         gchar** values = g_strsplit (lines[i], " ", -1);
         if (values[1] != NULL)
         {
+          rc_set_misc (values[0], values[1]);
+
           int j = 0;
           while (keys[j] != NULL)
           {
@@ -257,7 +359,7 @@ clock_changed (GtkWidget *object, gpointer data)
 
   const gchar* label = gtk_menu_item_get_label (GTK_MENU_ITEM(object));
 
-  switch (label[0])
+  switch (label[1])
   {
     case '1':
       session_user (0x0601);

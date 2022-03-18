@@ -1451,6 +1451,23 @@ int session_pad2bit(int i) // translate motions and buttons into codes
       return 0;
   }
 }
+
+void set_motion(int x, int y)
+{
+  session_maus_x = x;
+  session_maus_y = y;
+}
+
+void set_button(int z)
+{
+  session_maus_z = z;
+}
+
+void set_session_shift(int mode)
+{
+  session_shift = mode;
+}
+
 INLINE int session_listen(void) // handle all pending messages; 0 OK, !0 EXIT
 {
   if (gtk_loop() == 1)
