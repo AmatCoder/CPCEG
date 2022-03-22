@@ -1696,7 +1696,7 @@ INLINE void session_render(void) // update video, audio and timers
         session_hardblit?"SDL":"sdl",session_version);
       SDL_SetWindowTitle(session_hwnd,session_tmpstr);
 
-      gchar* perf = g_strdup_printf ("%g%% CPU", performance_f*100.0/VIDEO_PLAYBACK);
+      gchar* perf = g_strdup_printf ("%g%% CPU %i FPS", performance_f*100.0/VIDEO_PLAYBACK, performance_b*50/VIDEO_PLAYBACK);
       gtk_set_info (session_info, perf);
       g_free (perf);
     }

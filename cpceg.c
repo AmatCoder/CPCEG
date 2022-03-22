@@ -31,6 +31,9 @@
 
 static GtkBuilder* builder;
 static GtkWidget *mainwindow;
+static GtkWidget *blackbox;
+static GtkWidget *aspect_frame;
+static GtkWidget *drawing_area;
 static cairo_surface_t *surface = NULL;
 static GtkWidget *sbar1;
 static GtkWidget *sbar3;
@@ -41,6 +44,13 @@ static gboolean quit = FALSE;
 static gboolean disconnected = FALSE;
 static gboolean plus_enabled = FALSE;
 static gboolean vjoy_enabled = FALSE;
+static gboolean isfullscreen = FALSE;
+static gboolean keepaspect = TRUE;
+static gboolean zoom_to_integer = FALSE;
+static gint window_width = NATIVE_RES_X;
+static gint window_height = NATIVE_RES_Y;
+static gint bbox_width = NATIVE_RES_X;
+static gint bbox_height = NATIVE_RES_Y;
 static gint flip_joy = 0;
 
 static unsigned char *kbd;
@@ -88,6 +98,35 @@ static unsigned char kbd_j[]=
 };
 
 
+static void
+toggle_menu_visible (gboolean visible)
+{
+  GObject *menubar = gtk_builder_get_object (builder, "menu_bar");
+  GObject *sbarbox = gtk_builder_get_object (builder, "sbar_box");
+
+  gtk_widget_set_visible ((GtkWidget*) menubar, visible);
+  gtk_widget_set_visible ((GtkWidget*) sbarbox, visible);
+}
+
+
+void
+video_fullscreen (GtkCheckMenuItem* self, gpointer data)
+{
+  if (!isfullscreen)
+  {
+    toggle_menu_visible (FALSE);
+    gtk_window_fullscreen ((GtkWindow*) mainwindow);
+  }
+  else
+  {
+    gtk_window_unfullscreen ((GtkWindow*) mainwindow);
+    toggle_menu_visible (TRUE);
+  }
+
+  isfullscreen = !isfullscreen;
+}
+
+
 static int
 key_to_joy (int k)
 {
@@ -108,6 +147,12 @@ key_event (GtkWidget *widget,
            GdkEvent  *event,
            gpointer   data)
 {
+  if ((isfullscreen) && (event->key.type == GDK_KEY_PRESS) && (event->key.state & GDK_MOD1_MASK) && (event->key.keyval == GDK_KEY_Return))
+  {
+    gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "fullscreen1")), !isfullscreen);
+    return TRUE;
+  }
+
   if (event->key.hardware_keycode > 127)
     return TRUE;
 
@@ -149,6 +194,107 @@ flip_joystick (GtkCheckMenuItem* self, gpointer data)
 
 	kbd_j[9] = kbd_j[13] = (0x4C + flip_joy);
 	kbd_j[11] = kbd_j[15] = (0x4D - flip_joy);
+}
+
+
+void
+zoom_integer (GtkCheckMenuItem* self, gpointer data)
+{
+  //session_user (0x8A01);
+
+  if (self != NULL)
+    zoom_to_integer = gtk_check_menu_item_get_active (self);
+
+  if (zoom_to_integer)
+  {
+    double w =  ((double)bbox_width / (double)(NATIVE_RES_X + 1));
+    double h =  ((double)bbox_height / (double)(NATIVE_RES_Y + 1));
+
+    gtk_widget_set_size_request (aspect_frame, ((gint)w * NATIVE_RES_X) , ((gint)h * NATIVE_RES_Y));
+
+    gtk_widget_set_halign (aspect_frame, GTK_ALIGN_CENTER);
+    gtk_widget_set_valign (aspect_frame, GTK_ALIGN_CENTER);
+  }
+  else
+  {
+    gtk_widget_set_size_request (aspect_frame, NATIVE_RES_X, NATIVE_RES_Y);
+    gtk_widget_set_halign (aspect_frame, GTK_ALIGN_FILL);
+    gtk_widget_set_valign (aspect_frame, GTK_ALIGN_FILL);
+  }
+}
+
+
+void
+keep_aspect_ratio (GtkCheckMenuItem* self, gpointer data)
+{
+  if (self != NULL)
+    keepaspect = gtk_check_menu_item_get_active (self);
+
+  gtk_widget_set_sensitive (GTK_WIDGET(gtk_builder_get_object(builder, "zoom1")), keepaspect);
+
+  g_object_ref (drawing_area);
+  if (keepaspect)
+  {
+    gtk_container_remove (GTK_CONTAINER(blackbox), drawing_area);
+    gtk_container_add (GTK_CONTAINER(aspect_frame), drawing_area);
+    gtk_widget_show (aspect_frame);
+  }
+  else
+  {
+    gtk_container_remove (GTK_CONTAINER(aspect_frame), drawing_area);
+    gtk_widget_hide (aspect_frame);
+    gtk_box_pack_start (GTK_BOX(blackbox), drawing_area, TRUE, TRUE, 0);
+  }
+  g_object_unref (drawing_area);
+}
+
+
+static gboolean
+window_recal (gpointer data)
+{
+  gtk_box_pack_start (GTK_BOX(blackbox), aspect_frame, TRUE, TRUE, 0);
+  g_object_unref (aspect_frame);
+
+  return FALSE;
+}
+
+
+gboolean
+window_state_changed (GtkWidget *widget,
+                      GdkEvent *event,
+                      gpointer data)
+{
+  if (zoom_to_integer)
+  {
+    if (event->window_state.new_window_state == 128)
+      gtk_window_resize (GTK_WINDOW(mainwindow), window_width, window_height);
+    else if ((event->window_state.new_window_state == 132))
+      gtk_window_get_size (GTK_WINDOW(mainwindow), &window_width, &window_height);
+
+    g_object_ref (aspect_frame);
+    gtk_container_remove (GTK_CONTAINER(blackbox), aspect_frame);
+    g_timeout_add (100, window_recal, mainwindow);
+  }
+
+  return FALSE;
+}
+
+
+void
+blackbox_size_allocate (GtkWidget *widget,
+                        GdkRectangle *allocation,
+                        gpointer data)
+{
+  bbox_width = allocation->width;
+  bbox_height = allocation->height;
+
+  if (zoom_to_integer)
+  {
+    double w =  ((double)bbox_width / (double)(NATIVE_RES_X + 1));
+    double h =  ((double)bbox_height / (double)(NATIVE_RES_Y + 1));
+
+    gtk_widget_set_size_request (aspect_frame, ((gint)w * NATIVE_RES_X) , ((gint)h * NATIVE_RES_Y));
+  }
 }
 
 
@@ -221,6 +367,12 @@ mouse_moved (GtkWidget* widget, GdkEventMotion* event)
 gboolean
 mouse_button_event (GtkWidget* widget, GdkEventButton* event)
 {
+  if ((isfullscreen) && (event->button > 1) && (event->type == GDK_BUTTON_RELEASE))
+  {
+    GObject *menubar = gtk_builder_get_object (builder, "menu_bar");
+    toggle_menu_visible (!gtk_widget_is_visible (GTK_WIDGET(menubar)));
+  }
+
   set_button (event->type == GDK_BUTTON_PRESS);
   return TRUE;
 }
@@ -244,19 +396,40 @@ rc_set_misc (const gchar* setting, const gchar* value)
 {
   if (g_strcmp0 (setting, "misc") == 0)
   {
-    gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "misc1")), ((*value&1) == 1));
-    gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "misc2")), !!(*value&2) == 0);
+    gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "misc1")), ((*value&1) != 0));
+    gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "misc2")), ((*value&2) == 0));
   }
   else if (g_strcmp0 (setting, "fdcw") == 0)
   {
-    gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "fdcw1")), !!(*value&2) == 0);
-    gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "fdcw2")), ((*value&1) == 1));
+    gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "fdcw1")), ((*value&2) == 0));
+    gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "fdcw2")), ((*value&1) != 0));
   }
   else if (g_strcmp0 (setting, "casette") == 0)
   {
-    gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "casette1")), (!!(*value&2) == 1));
-    gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "casette2")), (!!(*value&4) == 1));
-    gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "casette3")), ((*value&1) == 1));
+    gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "casette1")), ((*value&2) != 0));
+    gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "casette2")), ((*value&4) != 0));
+    gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "casette3")), ((*value&1) != 0));
+  }
+  else if (g_strcmp0 (setting, "softvideo") == 0)
+  {
+    gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "softvideo1")), ((*value&4) != 0));
+    gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "softvideo2")), ((*value&1) != 0));
+    gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "softvideo3")), ((*value&2) != 0));
+  }
+  else if (g_strcmp0 (setting, "scanlines") == 0)
+  {
+    gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "scanlines5")), ((*value&4) != 0));
+
+    int n = value[0] - '0';
+    n &= 3;
+    gchar* s = g_strdup_printf ("scanlines %i", n);
+    gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, s)), TRUE);
+    g_free (s);
+  }
+  else if (g_strcmp0 (setting, "film") == 0)
+  {
+    gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "film1")), ((*value&1) == 0));
+    gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM(gtk_builder_get_object(builder, "film2")), ((*value&2) == 0));
   }
 }
 
@@ -584,8 +757,6 @@ gtk_loop (void)
 void
 gtk_create_window_new (void)
 {
-  GtkWidget *blackbox;
-  GtkWidget *drawing_area;
   GtkTargetEntry targetentries[] = {"text/uri-list", 0, 0};
 
   gtk_init (NULL, NULL);
@@ -595,11 +766,16 @@ gtk_create_window_new (void)
 
   mainwindow = GTK_WIDGET (gtk_builder_get_object(builder, "main_window"));
   blackbox = GTK_WIDGET (gtk_builder_get_object(builder, "black_box"));
+  aspect_frame = GTK_WIDGET (gtk_builder_get_object(builder, "aspect_frame"));
   drawing_area = GTK_WIDGET (gtk_builder_get_object(builder, "drawing"));
   sbar1 = GTK_WIDGET (gtk_builder_get_object(builder, "sbar_1"));
   sbar3 = GTK_WIDGET (gtk_builder_get_object(builder, "sbar_3"));
 
+  gtk_box_pack_start (GTK_BOX(blackbox), aspect_frame, TRUE, TRUE, 0);
+  gtk_container_add (GTK_CONTAINER(aspect_frame), drawing_area);
+
   gtk_widget_set_size_request (drawing_area, NATIVE_RES_X, NATIVE_RES_Y);
+  gtk_widget_add_events (drawing_area, GDK_POINTER_MOTION_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK);
 
   gtk_window_set_default_icon (gdk_pixbuf_new_from_resource ("/com/github/AmatCoder/CPCEG/cpcec.png", NULL));
 
